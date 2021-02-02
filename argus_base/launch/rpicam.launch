@@ -1,0 +1,10 @@
+<launch>
+<node name="rpicam_stream_cpp" pkg="argus_base" type="rpicam_stream.cpp" />
+<group ns="raw_image" >
+  <rosparam param="disable_pub_plugins">
+    - 'image_transport/compressedDepth'
+    - 'image_transport/compressed'
+    - 'image_transport/theora'
+  </rosparam>
+</group>
+</launch>

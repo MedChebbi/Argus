@@ -1,0 +1,16 @@
+rosdistro: 'noetic
+
+  '
+roslaunch:
+  uris:
+    host_raspberry_desktop__42703: http://raspberry-desktop:42703/
+rosversion: '1.15.8
+
+  '
+run_id: 5f4554b2-3172-11eb-92c3-67a97797d787
+speed: 0.5
+turn: 0.5
+wheel_radius: 0.03
+w2w_distance: 0.135
+repeat_rate: 0.0
+key_timeout: 0.0

@@ -1,0 +1,20 @@
+<launch>
+  <param name="speed" type="double"  value="0.5" />
+  <param name="turn" type="double"  value="0.5" />
+  <param name="repeat_rate" type="double"  value="0.0" />
+  <param name="key_timeout" type="double"  value="0.0" />
+  <param name="wheel_radius" type="double"  value="0.03" />
+  <param name="w2w_distance" type="double"  value="0.135" />
+  <node name="argus_head_node" pkg="argus_base" type="main_control.py" />
+  <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
+    <param name="port" value="/dev/ttyACM0" />
+    <param name="baud" value="115200" />
+  </node>
+  <node name="rpicam_stream_cpp" pkg="argus_base" type="rpicam_stream.cpp" />
+<group ns="raw_image" >
+  <rosparam param="disable_pub_plugins">
+    - 'image_transport/compressedDepth'
+    - 'image_transport/compressed'
+  </rosparam>
+</group>
+</launch>
