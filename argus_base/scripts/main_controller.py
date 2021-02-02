@@ -196,7 +196,7 @@ class Controller(object):
 		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
 		self.vel_sub = rospy.Subscriber('cmd_vel', Twist, self.callback)
 		self.teleop_sub = rospy.Subscriber('teleop/command', Bool, self.teleCallback)
-        self.publish()
+        	self.publish()
 
 	def publish(self):
 		self.pub.publish(self.vel)
