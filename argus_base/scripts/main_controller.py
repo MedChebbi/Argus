@@ -204,7 +204,7 @@ class Controller(object):
 
     def run(self):
         pass
-        
+
 	def callback(self, data):
 		if self.auto_mode == False:
             print("manual mode!")
