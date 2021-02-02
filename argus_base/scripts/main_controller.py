@@ -192,17 +192,22 @@ class Controller(object):
 		self.auto_mode = Bool()
 		self.auto_mode = True
 		self.pid = PID(setpoint=0,output_limits=(-1.0, 1.0))
-		
+
 		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
 		self.vel_sub = rospy.Subscriber('cmd_vel', Twist, self.callback)
 		self.teleop_sub = rospy.Subscriber('teleop/command', Bool, self.teleCallback)
+        self.publish()
 
 	def publish(self):
 		self.pub.publish(self.vel)
 		self.rate.sleep()
 
+    def run(self):
+        pass
+        
 	def callback(self, data):
 		if self.auto_mode == False:
+            print("manual mode!")
 			self.vel.linear.x = data.linear.x
 			self.vel.linear.y = data.linear.y
 			self.vel.linear.z = data.linear.z
@@ -210,11 +215,9 @@ class Controller(object):
 			self.vel.angular.y = data.angular.y
 			self.vel.angular.z = data.angular.z
 			print("robot speed: \n", str(self.vel))
-			self.publish()
 		else:
 			print("auto mode initiated")
-			pass
-		
+
 	def lineCallback(self, data):
 		self.line_info = data
 		if self.line_info.detected and self.auto_mode == True:
@@ -233,9 +236,8 @@ class Controller(object):
 			self.vel.angular.y = 0
 			self.vel.angular.z = 0
 			print("no line in auto mode \n robot speed: \n", str(self.vel))
-		self.publish()
 		#print(self.line_info.error)
-		
+
 	def teleCallback(self, data):
 		self.auto_mode = data
 		print(self.auto_mode)
