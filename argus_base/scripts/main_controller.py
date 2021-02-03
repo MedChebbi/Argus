@@ -193,41 +193,21 @@ class Controller(object):
 		self.auto_mode = True
 		self.pid = PID(setpoint=0,output_limits=(-1.0, 1.0))
 
-		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
-		self.vel_sub = rospy.Subscriber('cmd_vel', Twist, self.callback)
-		self.teleop_sub = rospy.Subscriber('teleop/command', Bool, self.teleCallback)
-        	self.publish()
+                self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
+                self.vel_sub = rospy.Subscriber('cmd_vel', Twist, self.callback)
+                self.teleop_sub = rospy.Subscriber('teleop/command', Bool, self.teleCallback)
 
 	def publish(self):
 		self.pub.publish(self.vel)
 		self.rate.sleep()
-
-    def run(self):
-        pass
-
-	def callback(self, data):
-		if self.auto_mode == False:
-            print("manual mode!")
-			self.vel.linear.x = data.linear.x
-			self.vel.linear.y = data.linear.y
-			self.vel.linear.z = data.linear.z
-			self.vel.angular.x= data.angular.x
-			self.vel.angular.y = data.angular.y
-			self.vel.angular.z = data.angular.z
-			print("robot speed: \n", str(self.vel))
-		else:
-			print("auto mode initiated")
-
-	def lineCallback(self, data):
-		self.line_info = data
-		if self.line_info.detected and self.auto_mode == True:
-			self.vel.linear.x = 0.3
-			self.vel.linear.y = 0
-			self.vel.linear.z = 0
-			self.vel.angular.x= 0
-			self.vel.angular.y = 0
-			self.vel.angular.z = self.pid(self.line_info.error)
-			print("after pid robot speed: \n", str(self.vel))
+	def run(self):
+            if self.line_info.detected and self.auto_mode == True:
+	        self.vel.linear.x = 0.3
+		    self.vel.linear.y = 0
+	    	self.vel.linear.z = 0
+	   		self.vel.angular.x= 0
+	    	self.vel.angular.y = 0
+    		self.vel.angular.z = self.pid(self.line_info.error) 			print("after pid robot speed: \n", str(self.vel))
 		elif (not self.line_info.detected) and self.auto_mode == True:
 			self.vel.linear.x = -0.3
 			self.vel.linear.y = 0
@@ -237,7 +217,17 @@ class Controller(object):
 			self.vel.angular.z = 0
 			print("no line in auto mode \n robot speed: \n", str(self.vel))
 		#print(self.line_info.error)
+                self.publish()
 
+	def callback(self, data):
+		if self.auto_mode == False:
+		    print("manual mode!")
+		    self.vel = data
+		    print("robot speed: \n", str(self.vel))
+
+	def lineCallback(self, data):
+		self.line_info = data
+		
 	def teleCallback(self, data):
 		self.auto_mode = data
 		print(self.auto_mode)
