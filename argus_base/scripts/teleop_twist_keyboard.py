@@ -48,7 +48,7 @@ commands = {
 class PublishThread(threading.Thread):
 	def __init__(self, rate):
 		super(PublishThread, self).__init__()
-		self.publisher = rospy.Publisher('cmd_vel', Twist, queue_size = 1)
+		self.publisher = rospy.Publisher('teleop/cmd_vel', Twist, queue_size = 1)
 		self.pub = rospy.Publisher('teleop/command', Bool, queue_size = 1)
 		self.x = 0.0
 		self.y = 0.0
@@ -160,7 +160,7 @@ if __name__=="__main__":
 		turn = 0.5
 		repeat = 0.0
 		key_timeout = 0.0
-		
+
 	if key_timeout == 0.0:
 		key_timeout = None
 
