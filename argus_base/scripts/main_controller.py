@@ -10,7 +10,6 @@ from dynamic_reconfigure.server import Server
 
 class Controller(object):
 	def __init__(self):
-		rospy.init_node("argus_head_node")
 		self.pub = rospy.Publisher("control/cmd_vel", Twist, queue_size=1)
 		self.rate = rospy.Rate(10)
 		self.vel = Twist()
@@ -62,6 +61,7 @@ class Controller(object):
 		print(self.auto_mode)
 
 if __name__=="__main__":
+    rospy.init_node("argus_head_node")
 	controller = Controller()
 	try:
         controller.run()

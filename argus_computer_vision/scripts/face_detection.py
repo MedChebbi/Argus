@@ -8,7 +8,6 @@ from cv_bridge import CvBridge, CvBridgeError
 class FaceDetect():
 	"""docstring for ."""
 	def __init__(self):
-		rospy.init_node("face_detection")
         self.face_cascade = cv2.CascadeClassifier('models/cascades/haarcascade_frontalface_alt2.xml')
 		self.bridge = CvBridge()
 		self.pub = rospy.Publisher("detected_face_image", Image, queue_size=1)
@@ -54,6 +53,7 @@ class FaceDetect():
 			print(e)
 
 if __name__ == '__main__':
+    rospy.init_node("face_detection")
     face_detector = FaceDetect()
 	try:
 		rospy.spin()

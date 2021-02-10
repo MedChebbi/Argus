@@ -15,7 +15,6 @@ from dynamic_reconfigure.server import Server
 class LineFollower():
 	"""docstring for ."""
 	def __init__(self):
-		rospy.init_node("line_follow")
 		self.start = 0
 		self.bridge = CvBridge()
 		self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
@@ -191,6 +190,7 @@ def reorder(myPoints):
 	return myPointsNew
 
 if __name__ == '__main__':
+	rospy.init_node("line_follow")
 	blackLineFollower = LineFollower()
 	try:
 		rospy.spin()

@@ -10,7 +10,6 @@ import numpy as np
 
 class Streamer:
 	def __init__(self):
-		rospy.init_node("rpicam_streaming_node", anonymous=True)
 		self.pub = rospy.Publisher("raw_image", Image, queue_size=1)
 		self.width = 480
 		self.height = 360
@@ -99,6 +98,7 @@ class Streamer:
 		self.rate.sleep()
 
 def main():
+	rospy.init_node("rpicam_streaming_node", anonymous=True)
 	try:
 		stream = Streamer()
 	except rospy.ROSInterruptException as e:
