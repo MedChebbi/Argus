@@ -6,14 +6,14 @@
 #define MOTOR_MAX_RPM 300        // motor's maximum rpm
 #define WHEEL_DIAMETER 0.065      // robot's wheel diameter expressed in meters
 #define FR_WHEEL_DISTANCE 0.6   // distance between front wheel and rear wheel
-#define LR_WHEEL_DISTANCE 0.333   // distance between left wheel and right wheel
+#define LR_WHEEL_DISTANCE 0.135   // distance between left wheel and right wheel
 #define PWM_BITS 8              // microcontroller's PWM pin resolution.
 //motor drive pins
 #define l_speed_pin  5
 #define l_w1         7
 #define l_w2         6
-#define r_w1         9
-#define r_w2         8
+#define r_w1         8
+#define r_w2         9
 #define r_speed_pin  10
 
 ros::NodeHandle nh;
@@ -57,13 +57,13 @@ void setup() {
   pinMode(l_w2,OUTPUT);
   //initialise
   sstop();
-  delay(500);
+  delay(250);
 }
 
 void loop() {
   nh.spinOnce();
   moving(demandx,demandz);
-  delay(2);
+  delay(5);
 }
 
 void right_forward(){

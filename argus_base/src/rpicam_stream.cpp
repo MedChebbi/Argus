@@ -25,6 +25,7 @@ int main(int argc, char** argv)
     image_transport::Publisher pub_frame = it.advertise("raw_image", 1);
 
     cv::Mat frame;//Mat is the image class defined in OpenCV
+    cv::Mat image;
     sensor_msgs::ImagePtr msg;
 
     ros::Rate loop_rate(20);
@@ -40,10 +41,11 @@ int main(int argc, char** argv)
         ros::shutdown();
       }
       // Convert image from cv::Mat (OpenCV) type to sensor_msgs/Image (ROS) type and publish
-      msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
+      flip(frame,image,-1);
+      msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
       pub_frame.publish(msg);
       //cv::imshow("camera", frame);
-      cv::waitKey(1); // Display image for 1 millisecond
+      //cv::waitKey(1); // Display image for 1 millisecond
 
       ros::spinOnce();
       loop_rate.sleep();

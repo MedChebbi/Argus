@@ -8,7 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 class FaceDetect():
 	"""docstring for ."""
 	def __init__(self):
-        self.face_cascade = cv2.CascadeClassifier('models/cascades/haarcascade_frontalface_alt2.xml')
+		self.face_cascade = cv2.CascadeClassifier('models/cascades/haarcascade_frontalface_alt2.xml')
 		self.bridge = CvBridge()
 		self.pub = rospy.Publisher("detected_face_image", Image, queue_size=1)
 		#self.pub2 = rospy.Publisher("detected_line_info", LineInfo, queue_size=1)
@@ -30,15 +30,15 @@ class FaceDetect():
 		#self.pub2.publish(self.msg)
 		self.rate.sleep()
 
-    def detect_face(self,img):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=2)
-        for (x, y, w, h) in faces:
-            width = x+w
-            height = y+h
-            cv2.rectangle(img,(x,y),(width,height),self.BLUE,1)
-        cv2.imshow('face detected',img)
-        return img
+	def detect_face(self,img):
+		gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=2)
+		for (x, y, w, h) in faces:
+			width = x+w
+			height = y+h
+			cv2.rectangle(img,(x,y),(width,height),self.BLUE,1)
+			#cv2.imshow('face detected',img)
+		return img
 
 	def callback(self, data):
 		try:
@@ -46,15 +46,15 @@ class FaceDetect():
 			self.width = image.shape[1]
 			self.height = image.shape[0]
 
-            img = detect_face(image.copy())
+			img = self.detect_face(image.copy())
 			self.img = self.bridge.cv2_to_imgmsg(img, "bgr8")
 			self.publish()
 		except CvBridgeError as e:
 			print(e)
 
 if __name__ == '__main__':
-    rospy.init_node("face_detection")
-    face_detector = FaceDetect()
+	rospy.init_node("face_detection")
+	face_detector = FaceDetect()
 	try:
 		rospy.spin()
 	except rospy.ROSInterruptException as e:
