@@ -5,7 +5,7 @@
   <param name="key_timeout" type="double"  value="0.0" />
   <param name="wheel_radius" type="double"  value="0.03" />
   <param name="w2w_distance" type="double"  value="0.135" />
-  <node name="argus_head_node" pkg="argus_base" type="main_control.py" />
+  <node name="argus_head_node" pkg="argus_base" type="main_controller.py" />
   <node name="teleop_twist_keyboard" pkg="argus_teleop" type="teleop_twist_keyboard.py" />
   <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
     <param name="port" value="/dev/ttyACM0" />
