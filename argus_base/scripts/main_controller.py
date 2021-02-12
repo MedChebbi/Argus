@@ -27,15 +27,26 @@ class Controller(object):
 		self.Kp, self.Ki, self.Kd = self.pid_param["KP"], self.pid_param["KI"], self.pid_param["KD"]
 		self.pid = PID(self.Kp, self.Ki, self.Kd,setpoint=0,output_limits=(-1.0, 1.0))
 		self.publish()
-
+		self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
+		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
+		self.vel_sub = rospy.Subscriber('/teleop/cmd_vel', Twist, self.callback)
+		
 	def publish(self):
 		self.pub.publish(self.vel)
 		print("publishing")
 
-	def run(self):
-		self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
+	def callback(self, data):
+		if self.auto_mode == False:
+			self.vel = data
+			print("robot speed: \n", str(self.vel))
+		else:
+			pass
+		self.publish()
+
+	def lineCallback(self, data):
+		self.line_info = data
 		if self.auto_mode == True:
-			self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
+
 			print(self.line_info.error)
 			if self.line_info.detected == True:
 				self.vel.linear.x = 0.4
@@ -45,18 +56,8 @@ class Controller(object):
 			else:
 				self.vel.linear.x = -0.4
 				print("no line in auto mode \n robot speed: \n", str(self.vel))
-		elif self.auto_mode == False:
-			print("manual")
-			self.vel_sub = rospy.Subscriber('/teleop/cmd_vel', Twist, self.callback)
-		rospy.spin()
-
-	def callback(self, data):
-		self.vel = data
-		print("robot speed: \n", str(self.vel))
-		self.publish()
-
-	def lineCallback(self, data):
-		self.line_info = data
+		else:
+			pass
 		self.publish()
 
 	def teleCallback(self, data):
@@ -72,7 +73,7 @@ if __name__=="__main__":
 	rospy.init_node("argus_head_node")
 	controller = Controller()
 	try:
-		controller.run()
+		rospy.spin()
 		print("done")
 	except rospy.ROSInterruptException as e:
 		print(e)
