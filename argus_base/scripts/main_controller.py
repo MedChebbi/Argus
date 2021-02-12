@@ -33,7 +33,6 @@ class Controller(object):
 	
 	def run(self):
 		while not rospy.is_shutdown():
-			#self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
 			if self.auto_mode == True:
 				print("automatic")
 				print(self.line_info.error)
@@ -44,13 +43,15 @@ class Controller(object):
 				else:
 					self.vel.linear.x = -0.4
 					print("no line in auto mode \n robot speed: \n", str(self.vel))
+				self.publish()
 			else:
 				print("manual")
-			self.publish()
-			self.rate.sleep()
+				print("robot speed: \n", str(self.vel))
+				self.publish()
 
 	def publish(self):
 		self.pub.publish(self.vel)
+		self.rate.sleep()
 		print("publishing")
 
 	def callback(self, data):
@@ -60,9 +61,9 @@ class Controller(object):
 		self.line_info = data
 
 	def teleCallback(self, data):
-		self.auto_mode = data
+		print(data)
+		self.auto_mode = data.data
 		print(self.auto_mode)
-
 	def reconfig(self, config, level):
 		self.pid_param = config
 		print(self.pid_param)
@@ -74,4 +75,7 @@ if __name__=="__main__":
 	try:
 		controller.run()
 	except rospy.ROSInterruptException as e:
+		controller.vel.linear.x = 0
+		controller.vel.angular.z = 0
+		controller.publish()
 		print(e)
