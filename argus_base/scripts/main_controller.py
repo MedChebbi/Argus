@@ -22,10 +22,10 @@ class Controller(object):
 		self.line_info = LineInfo()
 		self.auto_mode = Bool()
 		self.auto_mode = True
-		self.pid_param = {"KP": 0.05, "KI": 0, "KD": 0}
+		self.pid_param = {"KP": 0.25, "KI": 0, "KD": 0}
 		srv = Server(pidParamConfig, self.reconfig)
 		self.Kp, self.Ki, self.Kd = self.pid_param["KP"], self.pid_param["KI"], self.pid_param["KD"]
-		self.pid = PID(self.Kp, self.Ki, self.Kd,setpoint=0,output_limits=(-1.0, 1.0))
+		self.pid = PID(self.Kp, self.Ki, self.Kd,setpoint=0,output_limits=(-5.0, 5.0))
 		self.publish()
 		self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
 		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
