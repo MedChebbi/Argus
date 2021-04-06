@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 
     // 0 reads from your default camera
     const int CAMERA_INDEX = 0;
-    cv::VideoCapture capture(CAMERA_INDEX,cv::CAP_V4L);
+    cv::VideoCapture capture(CAMERA_INDEX);
     if (!capture.isOpened()) {
       ROS_ERROR_STREAM("Failed to open camera with index " << CAMERA_INDEX << "!");
       ros::shutdown();
