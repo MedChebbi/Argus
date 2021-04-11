@@ -10,7 +10,7 @@ from dynamic_reconfigure.server import Server
 
 class Controller(object):
 	def __init__(self):
-		self.pub = rospy.Publisher("control/cmd_vel", Twist, queue_size=1)
+		self.pub = rospy.Publisher("/argus/control/cmd_vel", Twist, queue_size=1)
 		self.rate = rospy.Rate(10)
 		self.vel = Twist()
 		self.vel.linear.x = 0
@@ -30,7 +30,7 @@ class Controller(object):
 		self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
 		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
 		self.vel_sub = rospy.Subscriber('/teleop/cmd_vel', Twist, self.callback)
-	
+
 	def run(self):
 		while not rospy.is_shutdown():
 			if self.auto_mode == True:

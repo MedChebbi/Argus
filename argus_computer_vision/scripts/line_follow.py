@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import rospy
 import cv2
@@ -31,7 +31,7 @@ class LineFollower():
 		self.WHITE = (255,255,255)
 		self.line_param = {"Width_Top": 60, "Height_Top": 40, "Width_Bottom": 0, "Height_Bottom" : 360,"THRES": 60, "MIN_AREA": 10000, "MAX_AREA": 18000}
 		srv = Server(lineParamConfig, self.reconfig)
-		self.sub = rospy.Subscriber("raw_image", Image, self.callback, queue_size = 1, buff_size=2**24)
+		self.sub = rospy.Subscriber("/camera/image_raw", Image, self.callback, queue_size = 1, buff_size=2**24)
 
 	def publish(self):
 		self.pub.publish(self.img)
@@ -63,10 +63,10 @@ class LineFollower():
 			print (self.msg)
 			self.img = self.bridge.cv2_to_imgmsg(imgWarped, "bgr8")
 			self.publish()
-			#if cv2.waitKey(1) & 0xFF == ord('q'):
-				#cv2.destroyAllWindows()
-			#cv2.imshow('warpedImg',imgWarped)
-			#cv2.imshow('bw',bwImg)
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+				cv2.destroyAllWindows()
+			cv2.imshow('warpedImg',imgWarped)
+			cv2.imshow('bw',bwImg)
 		except CvBridgeError as e:
 			print(e)
 

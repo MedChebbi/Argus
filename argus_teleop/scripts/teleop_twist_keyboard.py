@@ -157,7 +157,7 @@ if __name__=="__main__":
 		key_timeout = rospy.get_param("/key_timeout") #0.0
 	except:
 		speed = 0.5
-		turn = 3
+		turn = 0.5
 		repeat = 0.0
 		key_timeout = 0.0
 
