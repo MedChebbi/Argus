@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <include file="$(find argus_simulation)/launch/spawn_sdf.launch">
+        <arg name="robot_name" value="argus" />
+        <arg name="x" value="0.0" />
+        <arg name="y" value="0.0" />
+        <arg name="z" value="1.0" />
+        <arg name="roll" value="0"/>
+        <arg name="pitch" value="0"/>
+        <arg name="yaw" value="0.0" />
+        <arg name="sdf_robot_file" value="$(find argus_simulation)/models/argus/model.sdf" />
+    </include>
+</launch>

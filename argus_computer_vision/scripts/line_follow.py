@@ -29,9 +29,9 @@ class LineFollower():
 		self.GREEN = (0,255,0)
 		self.BLACK = (0,0,0)
 		self.WHITE = (255,255,255)
-		self.line_param = {"Width_Top": 60, "Height_Top": 40, "Width_Bottom": 0, "Height_Bottom" : 360,"THRES": 60, "MIN_AREA": 10000, "MAX_AREA": 18000}
+		self.line_param = {"Width_Top": 80, "Height_Top": 120, "Width_Bottom": 0, "Height_Bottom" : 360,"THRES": 25, "MIN_AREA": 5000, "MAX_AREA": 20000}
 		srv = Server(lineParamConfig, self.reconfig)
-		self.sub = rospy.Subscriber("raw_image", Image, self.callback, queue_size = 1, buff_size=2**24)
+		self.sub = rospy.Subscriber("camera/image_raw", Image, self.callback, queue_size = 1, buff_size=2**24)
 
 	def publish(self):
 		self.pub.publish(self.img)
@@ -83,7 +83,7 @@ class LineFollower():
 		roi = image.copy()
 		mask = int(HEIGHT/4)
 		roi[0:mask,:] = (255,255,255)      #(B, G, R)
-		roi[HEIGHT-mask:HEIGHT,:] = (255,255,255)
+		#roi[HEIGHT-mask:HEIGHT,:] = (255,255,255)
 		roi = cv2.GaussianBlur(roi,(5,5),1)
 		thr = self.line_param["THRES"]
 		Blackline= cv2.inRange(roi, (0,0,0), (thr,thr,thr))

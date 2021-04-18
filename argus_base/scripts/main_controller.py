@@ -10,7 +10,7 @@ from dynamic_reconfigure.server import Server
 
 class Controller(object):
 	def __init__(self):
-		self.pub = rospy.Publisher("control/cmd_vel", Twist, queue_size=1)
+		self.pub = rospy.Publisher("argus/control/cmd_vel", Twist, queue_size=1)
 		self.rate = rospy.Rate(10)
 		self.vel = Twist()
 		self.vel.linear.x = 0
@@ -25,23 +25,23 @@ class Controller(object):
 		self.pid_param = {"KP": 0.25, "KI": 0, "KD": 0}
 		srv = Server(pidParamConfig, self.reconfig)
 		self.Kp, self.Ki, self.Kd = self.pid_param["KP"], self.pid_param["KI"], self.pid_param["KD"]
-		self.pid = PID(self.Kp, self.Ki, self.Kd,setpoint=0,output_limits=(-5.0, 5.0))
+		self.pid = PID(self.Kp, self.Ki, self.Kd,setpoint=0,output_limits=(-2.0, 2.0))
 		self.publish()
 		self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
 		self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
 		self.vel_sub = rospy.Subscriber('/teleop/cmd_vel', Twist, self.callback)
-	
+
 	def run(self):
 		while not rospy.is_shutdown():
 			if self.auto_mode == True:
 				print("automatic")
 				print(self.line_info.error)
 				if self.line_info.detected == True:
-					self.vel.linear.x = 0.4
+					self.vel.linear.x = 0.3
 					self.vel.angular.z = self.pid(self.line_info.error)
 					print("after pid robot speed: \n", str(self.vel))
 				else:
-					self.vel.linear.x = -0.4
+					self.vel.linear.x = -0.05
 					print("no line in auto mode \n robot speed: \n", str(self.vel))
 				self.publish()
 			else:
