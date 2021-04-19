@@ -38,7 +38,7 @@
             <script>
               <uri>model://platform/materials/scripts/</uri>
               <uri>model://platform/materials/textures</uri>
-              <name>path/Image</name>
+              <name>line/Image</name>
             </script>
             <shader type='vertex'>
               <normal_map>__default__</normal_map>

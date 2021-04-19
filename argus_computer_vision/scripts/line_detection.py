@@ -12,9 +12,10 @@ import numpy as np
 from argus_computer_vision.cfg import lineParamConfig
 from dynamic_reconfigure.server import Server
 
-class LineFollower():
+class LineDetector():
 	"""docstring for ."""
 	def __init__(self):
+		rospy.init_node("line_detection")
 		self.start = 0
 		self.bridge = CvBridge()
 		self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
@@ -24,12 +25,14 @@ class LineFollower():
 		self.rate = rospy.Rate(10)
 		self.img = Image()
 		self.msg = LineInfo()
+		self.error = 0
+		self.ang = 0
 		self.RED = (0,0,255)
 		self.BLUE = (255,0,0)
 		self.GREEN = (0,255,0)
 		self.BLACK = (0,0,0)
 		self.WHITE = (255,255,255)
-		self.line_param = {"Width_Top": 80, "Height_Top": 120, "Width_Bottom": 0, "Height_Bottom" : 360,"THRES": 25, "MIN_AREA": 5000, "MAX_AREA": 20000}
+		self.line_param = {"Width_Top": 100, "Height_Top": 180, "Width_Bottom": 0, "Height_Bottom" : 360,"THRES": 25, "MIN_AREA": 15000, "MAX_AREA": 40000}
 		srv = Server(lineParamConfig, self.reconfig)
 		self.sub = rospy.Subscriber("camera/image_raw", Image, self.callback, queue_size = 1, buff_size=2**24)
 
@@ -81,7 +84,7 @@ class LineFollower():
 		x_last = WIDTH//2
 		y_last = HEIGHT//2
 		roi = image.copy()
-		mask = int(HEIGHT/4)
+		mask = int(HEIGHT/3)
 		roi[0:mask,:] = (255,255,255)      #(B, G, R)
 		#roi[HEIGHT-mask:HEIGHT,:] = (255,255,255)
 		roi = cv2.GaussianBlur(roi,(5,5),1)
@@ -155,13 +158,15 @@ class LineFollower():
 				cv2.circle(image, (WIDTH//2, HEIGHT//2),5, self.BLUE,cv2.FILLED)
 				cv2.line(image, (int(x_min), 200), (int(x_min), 250),self.BLUE,3)
 			needed_info.append(black_detected)
-			needed_info.append(error//coff)
-			needed_info.append(ang)
+			self.error = error//coff
+			self.ang = ang
+			needed_info.append(self.error)
+			needed_info.append(self.error)
 		else :
 			black_detected = False
 			needed_info.append(black_detected)
-			needed_info.append(0)
-			needed_info.append(0)
+			needed_info.append(self.error)
+			needed_info.append(self.ang)
 		return Blackline, needed_info
 
 	def warpImg (self,img,points):
@@ -190,8 +195,7 @@ def reorder(myPoints):
 	return myPointsNew
 
 if __name__ == '__main__':
-	rospy.init_node("line_follow")
-	blackLineFollower = LineFollower()
+	blackLineDetector = LineDetector()
 	try:
 		rospy.spin()
 	except rospy.ROSInterruptException as e:

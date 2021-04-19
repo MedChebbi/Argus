@@ -1,6 +1,6 @@
 <launch>
   <param name="speed" type="double"  value="0.5" />
-  <param name="turn" type="double"  value="3.0" />
+  <param name="turn" type="double"  value="1.0" />
   <param name="repeat_rate" type="double"  value="0.0" />
   <param name="key_timeout" type="double"  value="0.0" />
   <param name="wheel_radius" type="double"  value="0.03" />
