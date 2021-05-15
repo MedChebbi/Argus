@@ -78,9 +78,9 @@
     </link>
     
     <link name='camera'>
-      <pose frame=''>0.05 0.015 0.084 0 0.56 0</pose>
+      <pose frame=''>0.065 0.015 0.084 0 0.56 0</pose>
       <inertial>
-        <pose frame=''>0.01766 -0.022303 -8.9e-05 0 -0 0</pose>
+        <pose frame=''>0.03266 -0.022303 -8.9e-05 0 -0 0</pose>
         <mass>0.015961</mass>
         <inertia>
           <ixx>1.593e-05</ixx>
@@ -130,7 +130,6 @@
         <update_rate>30</update_rate>
         <camera name='head'>
           <horizontal_fov>1.085595</horizontal_fov>
-          <vertical_fov>1.085595</vertical_fov>
           <image>
             <width>640</width>
             <height>480</height>

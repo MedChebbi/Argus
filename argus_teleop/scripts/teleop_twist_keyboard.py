@@ -156,7 +156,7 @@ if __name__=="__main__":
 		repeat = rospy.get_param("/repeat_rate") #0.0
 		key_timeout = rospy.get_param("/key_timeout") #0.0
 	except:
-		speed = 0.5
+		speed = 0.3
 		turn = 1.0
 		repeat = 0.0
 		key_timeout = 0.0
