@@ -1,77 +1,86 @@
 #!/usr/bin/env python3
 
-import rospy
-import tensorflow as tf
 import cv2
-try:
-    from cv_bridge import CvBridge, CvBridgeError
-except:
-    pass
 import numpy as np
-
-from sensor_msgs.msg import Image
-from argus_msgs.msg import LineInfo
-from std_msgs.msg import String
+from queue import Queue
 
 class LineStateClassifier:
     """docstring for ."""
-    RED = (0,0,255)
-    BLUE = (255,0,0)
-    GREEN = (0,255,0)
-    BLACK = (0,0,0)
-    WHITE = (255,255,255)
 
-    def __init__(self, shape = (64,64,1), number_classes, model_path, debug = True):
-        self.num_classes = 6
-        self.class_names = ['straight', 'x', 'T', 'left', 'right', 'end']
-        self.shape = shape
-        self.interpreter = tf.lite.Interpreter(model_path=model_path)
+    def __init__(self, params):
+        self.num_classes = params['number_classes']
+        self.class_names = params['class_names']
+        self.shape = params['input_shape']
+        self.threshold = params['threshold']
+        self.pred_q = Queue(maxsize = params['queue_size'])
+        self.debug = params['debug']
+        if params['on_edge']:
+            import tflite_runtime.interpreter as tflite
+            self.interpreter = tflite.Interpreter(model_path=params['model_path'])
+        else:
+            import tensorflow as tf
+            self.interpreter = tf.lite.Interpreter(model_path=params['model_path'])
         self.interpreter.allocate_tensors()
-        self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
-        self.pubImg = rospy.Publisher("detected_line_image", Image, queue_size=1)
-        self.sub = rospy.Subscriber("camera/image_raw", Image, self.callback, queue_size = 1, buff_size=2**24)
-        self.msg =
-    def __predict(self,image):
-         # Get input and output tensors.
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
 
+    @staticmethod
+    def preprocess(gray_img, input_shape):
+        img = cv2.resize(gray_img, (input_shape[0],input_shape[1]))
+        img = np.array(np.reshape(img,input_shape),
+                                  dtype=np.uint8)
+        if input_shape[2]==3:
+            img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+        out_img = (np.expand_dims(img, axis = 0))
+        out_img = out_img/255.
+        return out_img
+
+    def predict(self, image):
+         # Get input and output tensors.
+        input_details = self.interpreter.get_input_details()
+        output_details = self.interpreter.get_output_details()
         # Test the model on random input data.
         input_shape = input_details[0]['shape']
         #set random np array to test
         #input_data = np.array(np.random.random_sample(input_shape), dtype=np.float32)
+        preprocessed_image = self.preprocess(image, self.shape)
+        input_data = np.array(preprocessed_image, dtype=np.float32)
+        self.interpreter.set_tensor(input_details[0]['index'], input_data)
 
-        img = cv2.imread('straight1.jpg')
-
-        test_img = preprocess(img)
-        pyplot.imshow(img)
-
-        input_data = np.array(test_img, dtype=np.float32)
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-
-        interpreter.invoke()
+        self.interpreter.invoke()
 
         # The function `get_tensor()` returns a copy of the tensor data.
         # Use `tensor()` in order to get a pointer to the tensor.
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        print(output_data)
-        pred_index = np.argmax(output_data[0])
-        print('The predicted class is:', class_names[pred_index] )
+        output_data = self.interpreter.get_tensor(output_details[0]['index'])
+        pred_sum = np.zeros(6)
+        if self.pred_q.full():
+            self.pred_q.get()
+        self.pred_q.put(output_data[0])
+        for elem in list(self.pred_q.queue):
+            pred_sum += elem
+        print("current queue size" ,self.pred_q.qsize())
+        average_query_pred = pred_sum/self.pred_q.qsize()
 
-    def publish(self):
-        self.pub.publish(self.img)
-        self.pub2.publish(self.msg)
-        self.pub3.publish(self.warp_img)
-
-    def callback(self, data):
-
+        if average_query_pred.any() > self.threshold:
+            pred_index = np.argmax(average_query_pred)
+            pred_class = self.class_names[pred_index]
+        else:
+            pred_class = 'bad prediction'
+        if self.debug:
+            print('logits: ' ,output_data[0])
+            print('The predicted class is:', pred_class)
+        return pred_class, output_data[0]
 
 if __name__ == '__main__':
-    rospy.init_node("line_features")
-	lineState = LineStateClassifier()
-	try:
-		rospy.spin()
-	except rospy.ROSInterruptException as e:
-		print(e)
-	finally:
-		cv2.destroyAllWindows()
+    params = dict()
+    params['input_shape'] = (64,64,1)
+    params['number_classes'] = 6
+    params['threshold'] = 0.95
+    params['queue_size'] = 5
+    params['class_names'] = ['straight', 'x', 'T', 'left', 'right', 'end']
+    params['model_path'] = '/home/mohamed/robolympix/gray_line_classifier.tflite'
+    params['on_edge'] = False
+    params['debug'] = True
+    line_classifier = LineStateClassifier(params)
+    img = cv2.imread('../media/T2.jpg')
+
+    test_img = line_classifier.preprocess(img, params['input_shape'])
+    pred_class , _ = line_classifier.predict(test_img)

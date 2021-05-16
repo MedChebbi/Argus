@@ -1,0 +1,6 @@
+classifier/input_shape : [64,64,1]
+classifier/number_classes : 6
+classifier/class_names : ['straight', 'x', 'T', 'left', 'right', 'end']
+classifier/model_path' : '/home/mohamed/robolympix/gray_line_classifier.tflite'
+classifier/on_edge : False
+classifier/debug : True
