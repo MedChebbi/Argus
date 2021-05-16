@@ -25,7 +25,7 @@ class LineDetector:
 
     def __init__(self,width = 480 ,height = 360, debug = True):
         self.bridge = CvBridge()
-        self.c = 0
+        #self.c = 0
         classifier_params = rospy.get_param('/classifier')
         self.classifier = LineStateClassifier(classifier_params)
         self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
