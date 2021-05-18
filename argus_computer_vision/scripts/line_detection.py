@@ -28,6 +28,7 @@ class LineDetector:
         #self.c = 0
         classifier_params = rospy.get_param('/classifier')
         self.classifier = LineStateClassifier(classifier_params)
+        self.run_ml_model = classifier_params['running']
         self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
         self.pub2 = rospy.Publisher("detected_line_info", LineInfo, queue_size=1)
         self.width = width
@@ -50,6 +51,8 @@ class LineDetector:
     def shutdown(self):
         self.msg.detected = False
         self.publish()
+        rospy.loginfo("shuting down line detection!")
+
 
     def reconfig(self, config, level):
         self.line_param = config
@@ -72,9 +75,11 @@ class LineDetector:
             gray = cv2.cvtColor(imgWarped,cv2.COLOR_BGR2GRAY)
             gray = cv2.GaussianBlur(gray,(7,7),1)
             ret,thr = cv2.threshold(gray,20,255,cv2.THRESH_BINARY)
-
-            pred_class, preds = self.classifier.predict(thr)
-            self.msg.state = pred_class
+            if self.run_ml_model:
+                pred_class, preds = self.classifier.predict(thr)
+                self.msg.state = pred_class
+            else:
+                self.msg.state = "None"
             out_image, bwImg, info = self.detBlack(imgWarped, draw = self.debug)
             self.msg.detected = info[0]
             self.msg.error = info[1]
@@ -83,7 +88,7 @@ class LineDetector:
                 rospy.loginfo(self.msg)
             self.img = self.bridge.cv2_to_imgmsg(out_image, "bgr8")
             self.publish()
-
+            rospy.on_shutdown(self.shutdown)
             '''
             cv2.imshow('warpedImg',thr)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -168,8 +173,8 @@ class LineDetector:
             x_last = x_min
             y_last = y_min
 
-            ang += 90 if (ang < -45) or (w_min > h_min and ang < 0)
-            ang = (90-ang)*-1 if w_min < h_min and ang > 0
+            if (ang < -45) or (w_min > h_min and ang < 0): ang += 90
+            if (w_min < h_min and ang > 0): ang = (90-ang)*-1
 
             ang = int(ang)
             box = cv2.boxPoints(blackbox)
@@ -223,10 +228,11 @@ def reorder(myPoints):
 	return myPointsNew
 
 def set_default_params():
+    rospy.set_param('classifier/running', False)
     rospy.set_param('classifier/input_shape', [64,64,1])
     rospy.set_param('classifier/number_classes', 6)
     rospy.set_param('classifier/class_names', ['straight', 'x', 'T', 'left', 'right', 'end'])
-    rospy.set_param('classifier/threshold', 0.9)
+    rospy.set_param('classifier/threshold', 0.7)
     rospy.set_param('classifier/queue_size', 3)
     rospy.set_param('classifier/model_path', '/home/mohamed/robolympix/model_grayscale.tflite')
     rospy.set_param('classifier/on_edge', False)
@@ -239,7 +245,6 @@ if __name__ == '__main__':
     try:
         rospy.spin()
     except rospy.ROSInterruptException as e:
-        rospy.on_shutdown(blackLineDetector.shutdown)
         rospy.logwarn(e)
     finally:
         cv2.destroyAllWindows()

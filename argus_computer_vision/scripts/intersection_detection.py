@@ -63,7 +63,7 @@ class LineStateClassifier:
             pred_index = np.argmax(average_query_pred)
             pred_class = self.class_names[pred_index]
         else:
-            pred_class = 'bad prediction'
+            pred_class = 'confusion'
         if self.debug:
             print("current queue size" ,self.pred_q.qsize())
             print('logits: ' ,output_data[0])
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     params = dict()
     params['input_shape'] = (64,64,1)
     params['number_classes'] = 6
-    params['threshold'] = 0.95
+    params['threshold'] = 0.65
     params['queue_size'] = 5
     params['class_names'] = ['straight', 'x', 'T', 'left', 'right', 'end']
     params['model_path'] = '/home/mohamed/robolympix/gray_line_classifier.tflite'
