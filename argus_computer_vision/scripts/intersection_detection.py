@@ -56,7 +56,7 @@ class LineStateClassifier:
         self.pred_q.put(output_data[0])
         for elem in list(self.pred_q.queue):
             pred_sum += elem
-        print("current queue size" ,self.pred_q.qsize())
+
         average_query_pred = pred_sum/self.pred_q.qsize()
 
         if average_query_pred.any() > self.threshold:
@@ -65,6 +65,7 @@ class LineStateClassifier:
         else:
             pred_class = 'bad prediction'
         if self.debug:
+            print("current queue size" ,self.pred_q.qsize())
             print('logits: ' ,output_data[0])
             print('The predicted class is:', pred_class)
         return pred_class, output_data[0]
