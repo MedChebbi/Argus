@@ -59,7 +59,7 @@ class LineStateClassifier:
 
         average_query_pred = pred_sum/self.pred_q.qsize()
 
-        if average_query_pred.any() > self.threshold:
+        if any(average_query_pred > self.threshold):
             pred_index = np.argmax(average_query_pred)
             pred_class = self.class_names[pred_index]
         else:

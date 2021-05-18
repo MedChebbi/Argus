@@ -47,6 +47,10 @@ class LineDetector:
         self.pub.publish(self.img)
         self.pub2.publish(self.msg)
 
+    def shutdown(self):
+        self.msg.detected = False
+        self.publish()
+
     def reconfig(self, config, level):
         self.line_param = config
         return config
@@ -163,12 +167,10 @@ class LineDetector:
             (x_min, y_min), (w_min, h_min), ang = blackbox
             x_last = x_min
             y_last = y_min
-            if ang < -45 :
-                ang = 90 + ang
-            if w_min < h_min and ang > 0:
-                ang = (90-ang)*-1
-            if w_min > h_min and ang < 0:
-                ang = 90 + ang
+
+            ang += 90 if (ang < -45) or (w_min > h_min and ang < 0)
+            ang = (90-ang)*-1 if w_min < h_min and ang > 0
+
             ang = int(ang)
             box = cv2.boxPoints(blackbox)
             box = np.int0(box)
@@ -237,6 +239,7 @@ if __name__ == '__main__':
     try:
         rospy.spin()
     except rospy.ROSInterruptException as e:
-        print(e)
+        rospy.on_shutdown(blackLineDetector.shutdown)
+        rospy.logwarn(e)
     finally:
         cv2.destroyAllWindows()
