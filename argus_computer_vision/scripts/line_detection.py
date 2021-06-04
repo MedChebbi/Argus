@@ -29,8 +29,8 @@ class LineDetector:
         classifier_params = rospy.get_param('/classifier')
         self.classifier = LineStateClassifier(classifier_params)
         self.run_ml_model = classifier_params['running']
-        self.pub = rospy.Publisher("detected_line_image", Image, queue_size=1)
-        self.pub2 = rospy.Publisher("detected_line_info", LineInfo, queue_size=1)
+        self.pub = rospy.Publisher("/detected_line/image", Image, queue_size=1)
+        self.pub2 = rospy.Publisher("/detected_line/info", LineInfo, queue_size=1)
         self.width = width
         self.height = height
         self.debug = debug
@@ -228,7 +228,7 @@ def reorder(myPoints):
 	return myPointsNew
 
 def set_default_params():
-    rospy.set_param('classifier/running', False)
+    rospy.set_param('classifier/running', True)
     rospy.set_param('classifier/input_shape', [64,64,1])
     rospy.set_param('classifier/number_classes', 6)
     rospy.set_param('classifier/class_names', ['straight', 'x', 'T', 'left', 'right', 'end'])

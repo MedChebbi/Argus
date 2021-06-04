@@ -29,7 +29,7 @@ class Controller(object):
         self.pid = PID(self.Kp, self.Ki, self.Kd,sample_time=0.01,setpoint=0,output_limits=(-1.5, 1.5))
         self.publish()
         self.teleop_sub = rospy.Subscriber('/teleop/command', Bool, self.teleCallback)
-        self.line_follow_sub = rospy.Subscriber("detected_line_info", LineInfo , self.lineCallback)
+        self.line_follow_sub = rospy.Subscriber("/detected_line/info", LineInfo , self.lineCallback)
         self.vel_sub = rospy.Subscriber('/teleop/cmd_vel', Twist, self.callback)
 
     def run_line_follow(self):
