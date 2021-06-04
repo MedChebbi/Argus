@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     image_transport::ImageTransport it(nh);
      
     // Publish to the /camera topic
-    image_transport::Publisher pub_frame = it.advertise("raw_image", 1);
+    image_transport::Publisher pub_frame = it.advertise("camera/image_raw", 1);
 
     cv::Mat frame;//Mat is the image class defined in OpenCV
     cv::Mat image;

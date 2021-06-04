@@ -27,8 +27,8 @@ class LineDetector:
         self.bridge = CvBridge()
         #self.c = 0
         classifier_params = rospy.get_param('/classifier')
-        self.classifier = LineStateClassifier(classifier_params)
         self.run_ml_model = classifier_params['running']
+        if self.run_ml_model: self.classifier = LineStateClassifier(classifier_params)
         self.pub = rospy.Publisher("/detected_line/image", Image, queue_size=1)
         self.pub2 = rospy.Publisher("/detected_line/info", LineInfo, queue_size=1)
         self.width = width
@@ -50,7 +50,7 @@ class LineDetector:
 
     def shutdown(self):
         self.msg.detected = False
-        self.publish()
+        self.pub2.publish(self.msg)
         rospy.loginfo("shuting down line detection!")
 
 
@@ -234,8 +234,8 @@ def set_default_params():
     rospy.set_param('classifier/class_names', ['straight', 'x', 'T', 'left', 'right', 'end'])
     rospy.set_param('classifier/threshold', 0.7)
     rospy.set_param('classifier/queue_size', 3)
-    rospy.set_param('classifier/model_path', '/home/mohamed/robolympix/model_grayscale.tflite')
-    rospy.set_param('classifier/on_edge', False)
+    rospy.set_param('classifier/model_path', '/home/raspberry/argus_ws/src/argus_computer_vision/scripts/models/model_grayscale.tflite')
+    rospy.set_param('classifier/on_edge', True)
     rospy.set_param('classifier/debug', False)
 
 if __name__ == '__main__':
