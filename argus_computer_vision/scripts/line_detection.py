@@ -117,7 +117,7 @@ class LineDetector:
         roi = imgWarped.copy()
         if draw:
             image = imgWarped.copy()
-        mask = int(HEIGHT/3.5)
+        mask = int(HEIGHT/2.5)
         roi[0:mask,:] = (255,255,255)      #(B, G, R)
         #roi[HEIGHT-mask:HEIGHT,:] = (255,255,255)
         roi = cv2.GaussianBlur(roi,(5,5),1)
@@ -232,11 +232,11 @@ def set_default_params():
     rospy.set_param('classifier/input_shape', [64,64,1])
     rospy.set_param('classifier/number_classes', 6)
     rospy.set_param('classifier/class_names', ['straight', 'x', 'T', 'left', 'right', 'end'])
-    rospy.set_param('classifier/threshold', 0.7)
+    rospy.set_param('classifier/threshold', 0.65)
     rospy.set_param('classifier/queue_size', 3)
-    rospy.set_param('classifier/model_path', '/home/raspberry/argus_ws/src/argus_computer_vision/scripts/models/model_grayscale.tflite')
-    rospy.set_param('classifier/on_edge', True)
-    rospy.set_param('classifier/debug', False)
+    rospy.set_param('classifier/model_path', '/home/mohamed/robolympix/argus_ws/src/argus_computer_vision/scripts/models/model_grayscale.tflite')
+    rospy.set_param('classifier/on_edge', False)
+    rospy.set_param('classifier/debug', True)
 
 if __name__ == '__main__':
     rospy.init_node("line_detection")

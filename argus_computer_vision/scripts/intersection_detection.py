@@ -63,7 +63,7 @@ class LineStateClassifier:
             pred_index = np.argmax(average_query_pred)
             pred_class = self.class_names[pred_index]
         else:
-            pred_class = 'confusion'
+            pred_class = 'Low accuracy'
         if self.debug:
             print("current queue size" ,self.pred_q.qsize())
             print('logits: ' ,output_data[0])
