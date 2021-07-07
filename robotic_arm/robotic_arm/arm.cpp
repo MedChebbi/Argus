@@ -73,8 +73,8 @@ void arm(void *params){
   int target_z;
   char str_x[2]; // Used in the parsing of the commands
   char str_z[2];
-
-  // One byte flag (bitmasked)
+  uint8_t arm_state;
+  
   // Binary flags: MSB --> LSB {busy, } 
   uint8_t flag = 0x00;
   
