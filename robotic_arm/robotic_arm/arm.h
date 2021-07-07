@@ -26,7 +26,17 @@
 
   // Bitmasks for the flags
   #define BUSY_BITMASK            0x80  // MSB in the flag is for the busy flag
- 
+  #define GRIPPER_BITMASK         0x40  // Gripper action or not
+  #define OPEN_G_BITMASK          0x20  // Gripper action is open/close
+  #define SLEEP_BITMASK           0x10  // whether in sleep position or not
+  #define STATE_BITMASK           0x03  // Two last bits for the state of the machine
+
+  // States of the machine
+  #define SEQUENCE_STATE          0
+  #define SINGLE_STATE            1
+  #define HALT_STATE              2
+
+  // Default sequences container 
   struct pair{
     uint8_t x;     // Value in millimeter
     uint8_t z;  
