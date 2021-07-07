@@ -10,8 +10,8 @@
   // PWM params (reference: https://randomnerdtutorials.com/esp32-pwm-arduino-ide/)
   #define PWM_FREQUENCY           50    // PWM signal frequency
   #define PWM_RESOLUTION          8     // Signal resolution in bits (8 --> [0, 255])
-  #define ELBOW_CHANNEL           1     // PWM channels
-  #define SHOULDER_CHANNEL        0
+  #define SHOULDER_CHANNEL        0     // PWM channels
+  #define ELBOW_CHANNEL           1     
   #define WRIST_CHANNEL           2     
   #define GRIPPER_CHANNEL         3
 
