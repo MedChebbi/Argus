@@ -26,7 +26,8 @@ void print_messages(void *params){
 }
 
 void setup() {
-  #if DEBUG
+  // Don't even include in code if we're not debugging
+  #if DEBUG 
     // Configure Serial
     Serial.begin(115200);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -46,7 +47,7 @@ void setup() {
                             tskNO_AFFINITY); // Run on any core available
   #endif // DEBUG
 
-  // 2nd Task --> Arm controller
+  // 2nd Task --> Arm controller (arm.h[arm.cpp])
   xTaskCreatePinnedToCore(arm,             // Function to run
                           "ARM",           // Name of task
                           2048,            // Stack size (bytes in ESP32, words in FreeRTOS)
