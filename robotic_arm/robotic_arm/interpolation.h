@@ -7,10 +7,11 @@
   
   #include <Ramp.h> // https://github.com/siteswapjuggler/RAMP
 
-  // Interpolation time
-  #define INTERPOLATION_TIME      1000 // Milliseconds
+  // Reach the target point in how many milliseconds
+  #define INTERPOLATION_TIME      1000 
 
-  class Interpolation{  
+  // 
+  class Interpolation{
     public:
       rampInt my_ramp;
       int previous = -1; // This would hold the previous value we interpolated to
