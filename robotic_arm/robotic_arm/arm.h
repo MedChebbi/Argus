@@ -2,6 +2,7 @@
   #define __ROBOTIC_ARM__
 
     #include "interpolation.h"
+    #include "trigonometry.h"
     #include "Arduino.h"
     
     // Servo pins

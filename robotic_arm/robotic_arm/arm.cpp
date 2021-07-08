@@ -39,8 +39,8 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
-Interpolation interp_x;                // interpolation objects
-Interpolation interp_x;
+Interpolation interp_x;               // interpolation objects
+Interpolation interp_z;
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
@@ -50,11 +50,12 @@ void arm(void *params){
   setup_servos();
   
   // Locals
-  char cmd[CMD_LEN];  // The command holder
-  int target_x;       // The target point in the (X, Z) plane (centimeter)
+  char cmd[CMD_LEN];                  // The command holder
+  int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
-  char str_x[2];      // Used in the parsing of the (X, Z) from commands
+  char str_x[2];                      // Used in the parsing of the (X, Z) from commands
   char str_z[2];
+  int servo_act[NUM_ANGLES];          // Holder of the servo values
   
   // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, -- , state [2 bits]} 
   uint8_t flag = 0x00;
@@ -107,12 +108,16 @@ void arm(void *params){
       else{ // Still interpolating to an old target
 
         // Interpolate (update ramp)
-        float x = interp_x.go(target_x, INTERPOLATION_TIME);
-        float z = interp_z.go(target_z, INTERPOLATION_TIME); 
+        float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
+        float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
 
-        // Calculate servo angles (turn into milliseconds)
-        /* CODE HERE */
-        
+        // Calculate servo angles 
+        float *angles = get_angles(x, z);
+
+        // Turn angles into milliseconds
+        for(uint8_t i = 0; i < NUM_ANGLES; i++){
+          servo_act[i] = rad_to_ms(angles[i]); // Refer to trigonometry.h [trigonometry.cpp]
+        }
       }
             
       // Apply actions to servos
