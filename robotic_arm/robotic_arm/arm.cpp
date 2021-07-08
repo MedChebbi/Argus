@@ -16,12 +16,12 @@
 
 #include "arm.h"
 
-// Define any sequence of points desired
+// Define any sequence of 12 points desired
 SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // First sequence
                 {
                  .id_ = "0000", // First sequence id --> dedicated to sleep position
-                 .sequence = { // Points' sequence to target
+                 .sequence = { // Points' sequence to target (centimeter)
                      {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
                      {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
                   }
@@ -39,6 +39,8 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
+Interpolation interp_x;                // interpolation objects
+Interpolation interp_x;
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
@@ -49,60 +51,75 @@ void arm(void *params){
   
   // Locals
   char cmd[CMD_LEN];  // The command holder
-  int target_x;       // The target point in the (X, Z) plane
+  int target_x;       // The target point in the (X, Z) plane (centimeter)
   int target_z;
   char str_x[2];      // Used in the parsing of the (X, Z) from commands
   char str_z[2];
   
-  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep position, X, X, state [2 bits]} 
+  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, -- , state [2 bits]} 
   uint8_t flag = 0x00;
   
   while(1){
     if(flag & BUSY_BITMASK){ // Busy doing some other commands --> don't parse anything
-      // Figure what are we busy with
-      switch(flag & STATE_BITMASK){
-        case SEQUENCE_STATE:{
-          
-          // Determine sequence step & calculate servo pos
-          /* CODE HERE */
-          
-          break;
-        }
-        case SINGLE_STATE:{
-          if(GRIPPER_BITMASK & flag){
+      if(flag & NEW_TARGET_BITMASK){ // There's a new target --> decoding time
+        
+        switch(flag & STATE_BITMASK){
+          case SEQUENCE_STATE:{
             
-            // Decode gripper action (haven't decided yet)
+            // Determine sequence step and assign targets
             /* CODE HERE */
             
+            target_x = 0;
+            target_z = 0;
+            flag |= NEW_TARGET_BITMASK;
+            break;
           }
-          else{ // We have a target point to head to
-            memcpy(str_x, cmd+1, 2); // Parse 2nd and 3rd elements of cmd
-            memcpy(str_z, cmd+3, 2); // Parse 4th and 5th elements of cmd
-            target_x = strtol(str_x, NULL, 10);
-            target_z = strtol(str_z, NULL, 10);
-            
-            // Calculate servo position
-            /* CODE HERE */
-          
+          case SINGLE_STATE:{
+            if(flag & GRIPPER_BITMASK){ // Decode gripper action and apply it
+              char percentage[3];
+              uint8_t grip_p = 100;
+              memcpy(percentage, cmd+2, 3);
+              grip_p = strtol(percentage, NULL, 10);
+              
+              // Apply grip action
+              grip(cmd[1], grip_p);
+            }
+            else{ // We have a target point to determine then head to
+              memcpy(str_x, cmd+1, 2); // Parse 2nd and 3rd elements of cmd
+              memcpy(str_z, cmd+3, 2); // Parse 4th and 5th elements of cmd
+              target_x = strtol(str_x, NULL, 10);
+              target_z = strtol(str_z, NULL, 10);
+              flag |= NEW_TARGET_BITMASK;
+            }
+            break;
           }
-          break;
-        }
-        case HALT_STATE:{
-          if(!(flag & SLEEP_BITMASK)){ // Not in sleep position
-            memcpy(cmd, "d0000", CMD_LEN); // Apply sleep sequence
-            //   // Clear last 2 bits   // Set the right state 
-            flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+          case HALT_STATE:{
+            if(flag & SLEEP_BITMASK) flag &= ~BUSY_BITMASK; // Reset busy flag (we're sleeping --> not busy)
+            else{ // Not in sleep position
+              memcpy(cmd, "d0000", CMD_LEN); // Apply sleep sequence
+              //   // Clear last 2 bits   // Set the right state 
+              flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+            } 
+            break;
           }
-          else flag &= ~BUSY_BITMASK; // Reset busy flag (we're sleeping --> not busy)
-          break;
-        }
+        }  
       }
-      
-      // Apply the deduced actions (calculated servo positions and gripper actuation)
+      else{ // Still interpolating to an old target
+
+        // Interpolate (update ramp)
+        float x = interp_x.go(target_x, INTERPOLATION_TIME);
+        float z = interp_z.go(target_z, INTERPOLATION_TIME); 
+
+        // Calculate servo angles (turn into milliseconds)
+        /* CODE HERE */
+        
+      }
+            
+      // Apply actions to servos
       /* CODE HERE */
        
     }
-    else{ // Not busy, could parse commands
+    else{ // Not busy --> could parse commands
       
       // There's a command to execute
       if(xQueueReceive(cmds_q, (void*)&cmd, 0) == pdTRUE){
@@ -112,8 +129,12 @@ void arm(void *params){
           break;
           
           case 'n': // Go to specific point
+            flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
+            break;
+            
           case 'g': // Actuate gripper
             flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
+            flag |= GRIPPER_BITMASK; // Set gripper flag
             break;
           
           case 'h': // Halt command, used to put the robotic arm into "sleep"
@@ -131,7 +152,27 @@ bool assign_cmd(char command[CMD_LEN]){
   return xQueueSend(cmds_q, (void*)&command, 0) == pdTRUE; // We successfully added the cmd
 }
 
-// Attach pins, attach PWM channels, and PWM frequency
+// Apply actions to the gripper
+void grip(char open_, uint8_t perc){
+  switch(open_){
+    case '0':{ // Close gripper
+      /* CODE HERE */
+      break;
+    }
+    
+    case '1':{ // Open gripper
+      /* CODE HERE */
+      break;
+    }
+    
+    default:{  // Invalid input
+      /* CODE HERE */
+      break;
+    }
+  }
+}
+
+// Attach pins, attach PWM channels, and set PWM frequency
 void setup_servos(){
   // Setup PWM channel
   ledcSetup(SHOULDER_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
