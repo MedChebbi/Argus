@@ -18,9 +18,9 @@
 
 // Define any sequence of 12 points desired
 SEQUENCE default_seq[NUM_SEQEUNCES] = {
-                // First sequence
+                // First sequence (dedicated to sleep position)
                 {
-                 .id_ = "0000", // First sequence id --> dedicated to sleep position
+                 .id_ = "0000", // First sequence id
                  .sequence = { // Points' sequence to target (centimeter)
                      {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
                      {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
@@ -39,24 +39,32 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
-Interpolation interp_x;               // interpolation objects
+Interpolation interp_x;               // Interpolation objects
 Interpolation interp_z;
+
+// Servo objects    // [min_range, max_range, timer, pin]
+ARMServo shoulder_servo(500, 2500, TIMER_1, SERVO_SHOULDER);
+ARMServo elbow_servo(500, 2500, TIMER_2, SERVO_ELBOW);
+ARMServo wrist_servo(500, 2500, TIMER_3, SERVO_WRIST);
+ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
   // Queue to hold commands for the robotic arm to execute
   cmds_q = xQueueCreate(CMD_QUEUE_LEN, CMD_LEN);
-  
+
+  // Setup servos
   setup_servos();
+  /* CODE HERE */
   
   // Locals
   char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
+  float *angles;                      // Angles to be calculated
   char str_x[2];                      // Used in the parsing of the (X, Z) from commands
   char str_z[2];
-  int servo_act[NUM_ANGLES];          // Holder of the servo values
-  
+   
   // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, -- , state [2 bits]} 
   uint8_t flag = 0x00;
   
@@ -83,7 +91,7 @@ void arm(void *params){
               grip_p = strtol(percentage, NULL, 10);
               
               // Apply grip action
-              grip(cmd[1], grip_p);
+              gripper_servo.grip(cmd[1], grip_p);
             }
             else{ // We have a target point to determine then head to
               memcpy(str_x, cmd+1, 2); // Parse 2nd and 3rd elements of cmd
@@ -107,21 +115,18 @@ void arm(void *params){
       }
       else{ // Still interpolating to an old target
 
-        // Interpolate (update ramp)
+        // Interpolate (update ramp step)
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
         float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
 
         // Calculate servo angles 
-        float *angles = get_angles(x, z);
-
-        // Turn angles into milliseconds
-        for(uint8_t i = 0; i < NUM_ANGLES; i++){
-          servo_act[i] = rad_to_ms(angles[i]); // Refer to trigonometry.h [trigonometry.cpp]
-        }
+        angles = get_angles(x, z);
       }
             
       // Apply actions to servos
-      /* CODE HERE */
+      shoulder_servo.actuate(angles[0]);
+      elbow_servo.actuate(angles[1]);
+      wrist_servo.actuate(angles[2]);
        
     }
     else{ // Not busy --> could parse commands
@@ -157,37 +162,10 @@ bool assign_cmd(char command[CMD_LEN]){
   return xQueueSend(cmds_q, (void*)&command, 0) == pdTRUE; // We successfully added the cmd
 }
 
-// Apply actions to the gripper
-void grip(char open_, uint8_t perc){
-  switch(open_){
-    case '0':{ // Close gripper
-      /* CODE HERE */
-      break;
-    }
-    
-    case '1':{ // Open gripper
-      /* CODE HERE */
-      break;
-    }
-    
-    default:{  // Invalid input
-      /* CODE HERE */
-      break;
-    }
-  }
-}
-
-// Attach pins, attach PWM channels, and set PWM frequency
+// Setup all servos
 void setup_servos(){
-  // Setup PWM channel
-  ledcSetup(SHOULDER_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcSetup(ELBOW_CHANNEL,    PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcSetup(WRIST_CHANNEL,    PWM_FREQUENCY, PWM_RESOLUTION);
-  ledcSetup(GRIPPER_CHANNEL,  PWM_FREQUENCY, PWM_RESOLUTION);
-  
-  // Attach PWM channel to LED pin
-  ledcAttachPin(SERVO_SHOULDER, SHOULDER_CHANNEL);
-  ledcAttachPin(SERVO_ELBOW,    ELBOW_CHANNEL);
-  ledcAttachPin(SERVO_WRIST,    WRIST_CHANNEL);
-  ledcAttachPin(SERVO_GRIPPER,  GRIPPER_CHANNEL);
+  shoulder_servo.setup_servo();
+  elbow_servo.setup_servo();
+  wrist_servo.setup_servo();
+  gripper_servo.setup_servo();
 }

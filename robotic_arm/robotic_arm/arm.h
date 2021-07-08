@@ -3,21 +3,8 @@
 
     #include "interpolation.h"
     #include "trigonometry.h"
+    #include "servo_arm.h"
     #include "Arduino.h"
-    
-    // Servo pins
-    #define SERVO_SHOULDER          16
-    #define SERVO_ELBOW             17
-    #define SERVO_WRIST             18
-    #define SERVO_GRIPPER           19
-    
-    // PWM params (reference: https://randomnerdtutorials.com/esp32-pwm-arduino-ide/)
-    #define PWM_FREQUENCY           50    // PWM signal frequency
-    #define PWM_RESOLUTION          8     // Signal resolution in bits (8 --> [0, 255])
-    #define SHOULDER_CHANNEL        0     // PWM channels
-    #define ELBOW_CHANNEL           1     
-    #define WRIST_CHANNEL           2     
-    #define GRIPPER_CHANNEL         3
   
     // Commands queue
     #define CMD_QUEUE_LEN           24    // How many commands to hold
@@ -52,11 +39,10 @@
       pair sequence[SEQUENCE_LEN];
     }; // Holds the sequence of points to target
     
-    // Func prototypes
-    void setup_servos();                    // Setup servo pins, PWM channels, and frequency
+    // Func prototypes                    
+    void setup_servos();                    
     bool assign_cmd(char command[CMD_LEN]); // Assign commands to the robotic arm
     void arm(void *params);                 // Animate the robotic arm
-    void grip(char open_, uint8_t perc);
 
 #endif
   
