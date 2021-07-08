@@ -16,7 +16,7 @@
 
 #include "arm.h"
 
-// Define any sequence of 12 points desired
+// Define any sequence of 12 points desired (refer to sequence.h)
 SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
                 {
@@ -48,6 +48,8 @@ ARMServo elbow_servo(500, 2500, TIMER_2, SERVO_ELBOW);
 ARMServo wrist_servo(500, 2500, TIMER_3, SERVO_WRIST);
 ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
 
+//*********************************************************************//
+
 // Arm controlling task; Servo controls in here
 void arm(void *params){
   // Queue to hold commands for the robotic arm to execute
@@ -55,7 +57,6 @@ void arm(void *params){
 
   // Setup servos
   setup_servos();
-  /* CODE HERE */
   
   // Locals
   char cmd[CMD_LEN];                  // The command holder
@@ -65,7 +66,7 @@ void arm(void *params){
   char str_x[2];                      // Used in the parsing of the (X, Z) from commands
   char str_z[2];
    
-  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, -- , state [2 bits]} 
+  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, in action , state [2 bits]} 
   uint8_t flag = 0x00;
   
   while(1){
@@ -77,10 +78,10 @@ void arm(void *params){
             
             // Determine sequence step and assign targets
             /* CODE HERE */
-            
             target_x = 0;
             target_z = 0;
-            flag |= NEW_TARGET_BITMASK;
+            
+            flag &= ~NEW_TARGET_BITMASK; // Reset new target mask
             break;
           }
           case SINGLE_STATE:{
@@ -98,12 +99,12 @@ void arm(void *params){
               memcpy(str_z, cmd+3, 2); // Parse 4th and 5th elements of cmd
               target_x = strtol(str_x, NULL, 10);
               target_z = strtol(str_z, NULL, 10);
-              flag |= NEW_TARGET_BITMASK;
+              flag &= ~NEW_TARGET_BITMASK; // Reset new target mask
             }
             break;
           }
           case HALT_STATE:{
-            if(flag & SLEEP_BITMASK) flag &= ~BUSY_BITMASK; // Reset busy flag (we're sleeping --> not busy)
+            if(flag & SLEEP_BITMASK) flag &= ~BUSY_BITMASK; // Reset busy flag (we're sleeping already --> not busy)
             else{ // Not in sleep position
               memcpy(cmd, "d0000", CMD_LEN); // Apply sleep sequence
               //   // Clear last 2 bits   // Set the right state 
@@ -113,8 +114,8 @@ void arm(void *params){
           }
         }  
       }
-      else{ // Still interpolating to an old target
-
+      else{ // Interpolating a value OR going to 
+        
         // Interpolate (update ramp step)
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
         float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
@@ -127,7 +128,13 @@ void arm(void *params){
       shoulder_servo.actuate(angles[0]);
       elbow_servo.actuate(angles[1]);
       wrist_servo.actuate(angles[2]);
-       
+
+      // Reached point
+      if(interp_x.my_ramp.isFinished() && interp_z.my_ramp.isFinished() /* && Sequence done ? */){
+        flag &= ~BUSY_BITMASK;
+      }
+      //if(!(flag & IN_ACTION_BITMASK)) 
+      
     }
     else{ // Not busy --> could parse commands
       
@@ -151,7 +158,8 @@ void arm(void *params){
             flag = (flag & ~STATE_BITMASK) | HALT_STATE;
             break;
         }
-        flag |= 1 << 7; // Set the busy flag
+        flag |= 1 << 7;               // Set the busy flag
+        flag |= NEW_TARGET_BITMASK;   // Set the new target falg
       }
     }
   }
