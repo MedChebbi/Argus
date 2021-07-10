@@ -3,7 +3,7 @@
  * There're 4 types of commands:
  *           --> "d****\0" : if the command starts with a 'd' char, the robotic
  *           |               arm is to go through the sequence of points with 
- *           |               id_ == "***\0" (* : char)
+ *           |               id_ == "****\0" (* : char)
  *           --> "n****\0" : if the command starts with a 'n' char, the robotic 
  *           |               arm is to go to the point X = **(1st 2*), Z = ** (2nd 2*)
  *           --> "g****\0" : if the command starts with a 'g' char, the robotic 
@@ -41,9 +41,11 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
+static QueueHandle_t log_q;           // Log error messages inside this queue
 Interpolation interp_x;               // Interpolation objects
 Interpolation interp_z;
 float *angles;                        // Arm angles to be calculated
+char err_buf[LOG_BUFF_LEN];           // Error reporter buff
 
 // Servo objects    // [min_range, max_range, timer, pin]
 ARMServo shoulder_servo(500, 2500, TIMER_1, SERVO_SHOULDER);
@@ -51,12 +53,13 @@ ARMServo elbow_servo(500, 2500, TIMER_2, SERVO_ELBOW);
 ARMServo wrist_servo(500, 2500, TIMER_3, SERVO_WRIST);
 ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
 
-//*********************************************************************//
+/*********************************************************************/
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
   
   cmds_q = xQueueCreate(CMD_QUEUE_LEN, CMD_LEN);
+  log_q  = xQueueCreate(LOG_QUEUE_LEN, LOG_BUFF_LEN);
 
   setup_servos();
   
@@ -69,7 +72,7 @@ void arm(void *params){
   int seq_idx;                        // Keeps track of the current sequence
   uint8_t seq_step = 0;               // Keeps track of the current sequence step
   
-  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, in sequence , state [2 bits]} 
+  // FLAG(8 bits): {busy, gripper, --, sleep state, new target, in sequence , state [2 bits]} 
   uint8_t flag = 0x00;
   
   while(1){
@@ -78,15 +81,20 @@ void arm(void *params){
         
         switch(flag & STATE_BITMASK){
           case SEQUENCE_STATE:{
-            
-            // Determine sequence step and assign targets
-            /* CODE HERE */
+
+            // Not in sequence already ?
+            if(!(flag & IN_SEQUENCE_BITMASK)){
+              // determine which sequence to play
+              int idx_t = strtol(cmd+1, NULL, 10);
+              seq_idx = idx_t > NUM_SEQEUNCES ? 0 : idx_t;
+              flag |= IN_SEQUENCE_BITMASK; 
+            }
             
             if(seq_step == default_seq[seq_idx].len){ // End of sequence
               flag &= ~IN_SEQUENCE_BITMASK;
+              flag &= ~BUSY_BITMASK;
             }
-            else{
-              flag |= IN_SEQUENCE_BITMASK; 
+            else{ // Still in sequence
               target_x = default_seq[seq_idx].sequence[seq_step].x; // Refer to sequence.h
               target_z = default_seq[seq_idx].sequence[seq_step].z;  
               seq_step++;
@@ -101,6 +109,9 @@ void arm(void *params){
               uint8_t grip_p = 100;
               memcpy(percentage, cmd+2, 3);
               grip_p = strtol(percentage, NULL, 10);
+              
+              // Cap the grip percentage to 100%
+              grip_p = grip_p > 100 ? 1 : grip_p / 100;
               
               // Apply grip action
               grip(cmd[1], grip_p);
@@ -135,8 +146,7 @@ void arm(void *params){
         // Calculate servo angles 
         angles = get_angles(x, z);
       }
-            
-      // Apply actions to servos
+
       actuate_servos(angles);
 
       // Reached point ?
@@ -180,27 +190,46 @@ void arm(void *params){
         flag |= NEW_TARGET_BITMASK;   // Set the new target falg
       }
     } // END Not busy
-
   }
 }
 
-// Add command to the commands' queue
+/*********************************************************************/
+// Communication functions
+/*********************************************************************/
+
+// Add command to the commands' queue (to be called by the main code)
 bool assign_cmd(char command[CMD_LEN]){
   return xQueueSend(cmds_q, (void*)&command, 0) == pdTRUE; // We successfully added the cmd
 }
+
+// Return error messages (to be called by the main code)
+char* get_error(){
+  xQueueReceive(log_q, (void*)&err_buf, 0);
+  return err_buf;
+}
+
+// To be used by the arm task to log errors
+bool log_error(char *err){
+  if(strlen(err) > LOG_BUFF_LEN){
+    return false;
+  }
+  return xQueueSend(log_q, (void*)&err, 0) == pdTRUE; // We successfully logged the error
+}
+
+/*********************************************************************/
+// Servo functions
+/*********************************************************************/
 
 // Actuate gripper
 void grip(char open_, uint8_t perc){
   switch(open_){
     case '0':{ // Close gripper
-      /* CODE HERE */
-      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta control the perc input and check the sign of action
+      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     case '1':{ // Open gripper
-      /* CODE HERE */
-      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta control the perc input and check the sign of action
+      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     

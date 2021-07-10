@@ -10,11 +10,15 @@
     // Commands queue
     #define CMD_QUEUE_LEN           24    // How many commands to hold
     #define CMD_LEN                 6     // How long each commands will be (max length)
+
+    // Error log queue
+    #define LOG_QUEUE_LEN           3     // How many error messages to hold
+    #define LOG_BUFF_LEN            64    // How long each error msg will be (max length)
   
     // Bitmasks for the flags
     #define BUSY_BITMASK            0x80  // MSB in the flag is for the busy flag
     #define GRIPPER_BITMASK         0x40  // Gripper action or not
-    #define OPEN_G_BITMASK          0x20  // Gripper action is open/close
+    #define UNUSED_BITMASK__        0x20  // Gripper action is open/close
     #define SLEEP_BITMASK           0x10  // whether in sleep position or not
     #define NEW_TARGET_BITMASK      0x08  // Whether we're interpolating to a target or we have a new one
     #define IN_SEQUENCE_BITMASK     0x04  // Not done with sequence/move yet
@@ -29,8 +33,10 @@
     void setup_servos();                    
     bool assign_cmd(char command[CMD_LEN]); // Assign commands to the robotic arm
     void arm(void *params);                 // Animate the robotic arm
-    void grip(char open_, uint8_t perc);     // Actuate the gripper
+    void grip(char open_, uint8_t perc);    // Actuate the gripper
     void actuate_servos(float *ang);
+    char* get_error();                      // Returns the oldest error (queue)
+    bool log_error(char *err);              // Adds errors to the queue
 
 #endif
   
