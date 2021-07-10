@@ -1,11 +1,12 @@
 #include "trigonometry.h"
 
-// Calculates angles for the 3 joints in radians
+// Calculates angles for the 3 joints in radians 
 float* get_angles(float x, float z){
   static float angles[NUM_ANGLES];
   float d, beta, gamma; // Intermediary variables
 
-  d = sqrt(x*x + z*z);  // Distance from center of the plane to target point
+  // Illustration: https://github.com/MedChebbi/Argus/blob/master/robotic_arm/images/trigonometry.png
+  d = sqrt(x*x + z*z);
   beta = acos(d/(2*SEGMENT_LEN));
   gamma = atan(x/z);
 
