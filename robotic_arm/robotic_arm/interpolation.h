@@ -16,6 +16,7 @@
       rampInt my_ramp;
       int previous = -1; // This would hold the previous value we interpolated to
       int go(int input, int duration);
+      bool finished();
   };
 
 #endif

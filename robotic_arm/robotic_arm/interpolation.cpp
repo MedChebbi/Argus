@@ -7,3 +7,7 @@ int Interpolation :: go(int input, int duration) {
   }
   return my_ramp.update();  // Get step
 }
+
+bool Interpolation :: finished(){
+  return my_ramp.isFinished();
+}
