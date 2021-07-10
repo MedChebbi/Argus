@@ -15,7 +15,7 @@
     }; // Holds the (x, z) point to go to
     
     struct SEQUENCE{
-      char id_ [SEQ_ID_LEN];
+      char id_ [SEQ_ID_LEN]; // For now, the id is the idx .. might make a hashing func later
       uint8_t len;
       pair sequence[MAX_SEQUENCE_LEN];
     }; // Holds the sequence of points to target
