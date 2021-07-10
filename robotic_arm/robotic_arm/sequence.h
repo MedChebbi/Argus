@@ -4,7 +4,7 @@
     #include "Arduino.h"
     
     // Default sequences creation
-    #define SEQUENCE_LEN            12    // Max steps count in each sequence
+    #define MAX_SEQUENCE_LEN        12    // Max steps count in each sequence
     #define SEQ_ID_LEN              5     // Length of the sequence ID
     #define NUM_SEQEUNCES           2     // Number of default sequences
 
@@ -16,7 +16,8 @@
     
     struct SEQUENCE{
       char id_ [SEQ_ID_LEN];
-      pair sequence[SEQUENCE_LEN];
+      uint8_t len;
+      pair sequence[MAX_SEQUENCE_LEN];
     }; // Holds the sequence of points to target
     
 #endif
