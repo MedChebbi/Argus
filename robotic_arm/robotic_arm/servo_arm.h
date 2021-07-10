@@ -16,6 +16,9 @@
   #define TIMER_3                 2     
   #define TIMER_4                 3
 
+  // 
+  #define MAX_GRIP_ANG            60    // The maximum angle the gripper could open
+
   // Custom servo class
   class ARMServo{
     private:
@@ -34,8 +37,6 @@
       void set_defaults(int min_, int max_, uint8_t timer_, uint8_t pin_);
       void setup_servo();
       void actuate(int ang);
-      void grip(char open_, uint8_t perc);
   };
-
   
 #endif

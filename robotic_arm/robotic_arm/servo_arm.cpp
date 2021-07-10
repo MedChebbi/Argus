@@ -24,23 +24,3 @@ void ARMServo :: setup_servo(){
 void ARMServo :: actuate(int ang){
   my_servo.write(ang);
 }
-
-// Apply actions to the gripper
-void ARMServo :: grip(char open_, uint8_t perc){
-  switch(open_){
-    case '0':{ // Close gripper
-      /* CODE HERE */
-      break;
-    }
-    
-    case '1':{ // Open gripper
-      /* CODE HERE */
-      break;
-    }
-    
-    default:{  // Invalid input
-      /* CODE HERE */
-      break;
-    }
-  }
-}
