@@ -15,10 +15,23 @@ The **robotic arm driver** is designed to receive **4 different types of command
 
 This diagram is a primary design for the software:
 
-<img src="images/sys_design.png" width=640>
+<img src="images/sys_design.png">
 
 > System design diagram
  
+## Reverse kinematics approach
+
+<img src="images/trigonometry.png">
+
+> Reverse kinematics approach
+
+My approach was:
+
+- 1st step: Calculate the distance **D**
+- 2nd step: Calculate the **Beta** angle
+- 3rd step: Calculate the **Gamma** angle
+- 4th step: Calculate the **Shoulder**, **Elbow**, and **Wrist** angles
+
 ## Implementation
 
 This is a work-in-progress and minimal advancements have been made in the code, except for the serial printing task, the two main tasks are still in dev phase.
