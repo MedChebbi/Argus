@@ -17,7 +17,7 @@
     #define OPEN_G_BITMASK          0x20  // Gripper action is open/close
     #define SLEEP_BITMASK           0x10  // whether in sleep position or not
     #define NEW_TARGET_BITMASK      0x08  // Whether we're interpolating to a target or we have a new one
-    #define IN_ACTION_BITMASK       0x04  // Not done with sequence/move yet
+    #define IN_SEQUENCE_BITMASK     0x04  // Not done with sequence/move yet
     #define STATE_BITMASK           0x03  // Two last bits for the state of the machine
     
     // States of the machine
@@ -29,6 +29,8 @@
     void setup_servos();                    
     bool assign_cmd(char command[CMD_LEN]); // Assign commands to the robotic arm
     void arm(void *params);                 // Animate the robotic arm
+    void grip(char open_, uint8_t perc);     // Actuate the gripper
+    void actuate_servos(float *ang);
 
 #endif
   

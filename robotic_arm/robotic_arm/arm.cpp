@@ -21,7 +21,8 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
                 {
                  .id_ = "0000", // First sequence id
-                 .sequence = { // Points' sequence to target (centimeter)
+                 .len = 12, 
+                 .sequence = {  // Points' sequence to target (centimeter)
                      {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
                      {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
                   }
@@ -30,6 +31,7 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // Second sequence
                 {
                  .id_ = "0001", 
+                 .len = 12,
                  .sequence = {
                      {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
                      {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
@@ -41,6 +43,7 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
 Interpolation interp_x;               // Interpolation objects
 Interpolation interp_z;
+float *angles;                        // Arm angles to be calculated
 
 // Servo objects    // [min_range, max_range, timer, pin]
 ARMServo shoulder_servo(500, 2500, TIMER_1, SERVO_SHOULDER);
@@ -52,21 +55,21 @@ ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
-  // Queue to hold commands for the robotic arm to execute
+  
   cmds_q = xQueueCreate(CMD_QUEUE_LEN, CMD_LEN);
 
-  // Setup servos
   setup_servos();
   
   // Locals
   char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
-  float *angles;                      // Angles to be calculated
   char str_x[2];                      // Used in the parsing of the (X, Z) from commands
   char str_z[2];
-   
-  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, in action , state [2 bits]} 
+  int seq_idx;                        // Keeps track of the current sequence
+  uint8_t seq_step = 0;               // Keeps track of the current sequence step
+  
+  // FLAG(8 bits): {busy, gripper, open/close gripper, sleep state, new target, in sequence , state [2 bits]} 
   uint8_t flag = 0x00;
   
   while(1){
@@ -78,10 +81,18 @@ void arm(void *params){
             
             // Determine sequence step and assign targets
             /* CODE HERE */
-            target_x = 0;
-            target_z = 0;
             
-            flag &= ~NEW_TARGET_BITMASK; // Reset new target mask
+            if(seq_step == default_seq[seq_idx].len){ // End of sequence
+              flag &= ~IN_SEQUENCE_BITMASK;
+            }
+            else{
+              flag |= IN_SEQUENCE_BITMASK; 
+              target_x = default_seq[seq_idx].sequence[seq_step].x; // Refer to sequence.h
+              target_z = default_seq[seq_idx].sequence[seq_step].z;  
+              seq_step++;
+            }
+
+            flag &= ~NEW_TARGET_BITMASK;  // Reset new target flag
             break;
           }
           case SINGLE_STATE:{
@@ -92,7 +103,7 @@ void arm(void *params){
               grip_p = strtol(percentage, NULL, 10);
               
               // Apply grip action
-              gripper_servo.grip(cmd[1], grip_p);
+              grip(cmd[1], grip_p);
             }
             else{ // We have a target point to determine then head to
               memcpy(str_x, cmd+1, 2); // Parse 2nd and 3rd elements of cmd
@@ -112,9 +123,10 @@ void arm(void *params){
             } 
             break;
           }
-        }  
-      }
-      else{ // Interpolating a value OR going to 
+        } // END Switch arm states
+      } // END If new target
+      
+      else{ // Interpolating a value OR going to interpolate
         
         // Interpolate (update ramp step)
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
@@ -125,17 +137,23 @@ void arm(void *params){
       }
             
       // Apply actions to servos
-      shoulder_servo.actuate(angles[0]);
-      elbow_servo.actuate(angles[1]);
-      wrist_servo.actuate(angles[2]);
+      actuate_servos(angles);
 
-      // Reached point
-      if(interp_x.my_ramp.isFinished() && interp_z.my_ramp.isFinished() /* && Sequence done ? */){
-        flag &= ~BUSY_BITMASK;
+      // Reached point ?
+      if(interp_x.finished() && interp_z.finished()){
+        
+        // Am I in a sequence ?
+        if(flag & IN_SEQUENCE_BITMASK){
+          flag |= NEW_TARGET_BITMASK;  // Set new target flag (target == next sequence step)
+        }
+        
+        // I'm not in a sequence AND I've reached the target --> no longer busy
+        else{
+          flag &= ~BUSY_BITMASK;
+        }
       }
-      //if(!(flag & IN_ACTION_BITMASK)) 
-      
-    }
+    } // END If busy
+    
     else{ // Not busy --> could parse commands
       
       // There's a command to execute
@@ -161,7 +179,8 @@ void arm(void *params){
         flag |= 1 << 7;               // Set the busy flag
         flag |= NEW_TARGET_BITMASK;   // Set the new target falg
       }
-    }
+    } // END Not busy
+
   }
 }
 
@@ -170,10 +189,40 @@ bool assign_cmd(char command[CMD_LEN]){
   return xQueueSend(cmds_q, (void*)&command, 0) == pdTRUE; // We successfully added the cmd
 }
 
+// Actuate gripper
+void grip(char open_, uint8_t perc){
+  switch(open_){
+    case '0':{ // Close gripper
+      /* CODE HERE */
+      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta control the perc input and check the sign of action
+      break;
+    }
+    
+    case '1':{ // Open gripper
+      /* CODE HERE */
+      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta control the perc input and check the sign of action
+      break;
+    }
+    
+    default:{  // Invalid input
+      /* CODE HERE */
+      // Maybe return error code ?
+      break;
+    }
+  }
+}
+
 // Setup all servos
 void setup_servos(){
   shoulder_servo.setup_servo();
   elbow_servo.setup_servo();
   wrist_servo.setup_servo();
   gripper_servo.setup_servo();
+}
+
+// Apply actions to servos
+void actuate_servos(float *ang){
+  shoulder_servo.actuate(ang[0]);
+  elbow_servo.actuate(ang[1]);
+  wrist_servo.actuate(ang[2]);
 }
