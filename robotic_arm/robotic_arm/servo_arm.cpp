@@ -24,3 +24,8 @@ void ARMServo :: setup_servo(){
 void ARMServo :: actuate(int ang){
   my_servo.write(ang);
 }
+
+// Release the ressources allocated for servo
+void ARMServo :: release_servo(){
+  my_servo.detach();
+}

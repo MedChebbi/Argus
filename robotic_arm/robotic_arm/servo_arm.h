@@ -11,7 +11,7 @@
 
   // PWM params (reference: https://randomnerdtutorials.com/esp32-pwm-arduino-ide/)
   #define PWM_FREQUENCY           50    // PWM signal frequency
-  #define TIMER_1                 0     // PWM channels
+  #define TIMER_1                 0     // Timers to be allocated by the servo lib
   #define TIMER_2                 1     
   #define TIMER_3                 2     
   #define TIMER_4                 3
@@ -37,6 +37,7 @@
       void set_defaults(int min_, int max_, uint8_t timer_, uint8_t pin_);
       void setup_servo();
       void actuate(int ang);
+      void release_servo();
   };
   
 #endif
