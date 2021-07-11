@@ -54,6 +54,8 @@ ARMServo wrist_servo(500, 2500, TIMER_3, SERVO_WRIST);
 ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
 
 /*********************************************************************/
+// Main task --> Robotic arm animation
+/*********************************************************************/
 
 // Arm controlling task; Servo controls in here
 void arm(void *params){
@@ -67,130 +69,190 @@ void arm(void *params){
   char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
-  char str_x[2];                      // Used in the parsing of the (X, Z) from commands
-  char str_z[2];
+  char str_x[3];                      // Used in the parsing of the (X, Z) from commands
+  char str_z[3];
   int seq_idx;                        // Keeps track of the current sequence
+  int prev_seq_idx;
   uint8_t seq_step = 0;               // Keeps track of the current sequence step
   
-  // FLAG(8 bits): {busy, gripper, --, sleep state, new target, in sequence , state [2 bits]} 
-  uint8_t flag = 0x00;
+  // FLAG(8 bits): {busy, gripper, --, sleep state, new target, in sequence , state [3 bits]} 
+  uint8_t flag = PARSE_STATE;
   
   while(1){
-    if(flag & BUSY_BITMASK){ // Busy doing some other commands --> don't parse anything
-      if(flag & NEW_TARGET_BITMASK){ // There's a new target --> decoding time
-        
-        switch(flag & STATE_BITMASK){
-          case SEQUENCE_STATE:{
-
-            // Not in sequence already ?
-            if(!(flag & IN_SEQUENCE_BITMASK)){
-              // determine which sequence to play
-              int idx_t = strtol(cmd+1, NULL, 10);
-              seq_idx = idx_t > NUM_SEQEUNCES ? 0 : idx_t;
-              flag |= IN_SEQUENCE_BITMASK; 
-            }
-            
-            if(seq_step == default_seq[seq_idx].len){ // End of sequence
-              flag &= ~IN_SEQUENCE_BITMASK;
-              flag &= ~BUSY_BITMASK;
-            }
-            else{ // Still in sequence
-              target_x = default_seq[seq_idx].sequence[seq_step].x; // Refer to sequence.h
-              target_z = default_seq[seq_idx].sequence[seq_step].z;  
-              seq_step++;
-            }
-
-            flag &= ~NEW_TARGET_BITMASK;  // Reset new target flag
-            break;
-          }
-          case SINGLE_STATE:{
-            if(flag & GRIPPER_BITMASK){ // Decode gripper action and apply it
-              char percentage[3];
-              uint8_t grip_p = 100;
-              memcpy(percentage, cmd+2, 3);
-              grip_p = strtol(percentage, NULL, 10);
-              
-              // Cap the grip percentage to 100%
-              grip_p = grip_p > 100 ? 1 : grip_p / 100;
-              
-              // Apply grip action
-              grip(cmd[1], grip_p);
-            }
-            else{ // We have a target point to determine then head to
-              memcpy(str_x, cmd+1, 2); // Parse 2nd and 3rd elements of cmd
-              memcpy(str_z, cmd+3, 2); // Parse 4th and 5th elements of cmd
-              target_x = strtol(str_x, NULL, 10);
-              target_z = strtol(str_z, NULL, 10);
-              flag &= ~NEW_TARGET_BITMASK; // Reset new target mask
-            }
-            break;
-          }
-          case HALT_STATE:{
-            if(flag & SLEEP_BITMASK) flag &= ~BUSY_BITMASK; // Reset busy flag (we're sleeping already --> not busy)
-            else{ // Not in sleep position
-              memcpy(cmd, "d0000", CMD_LEN); // Apply sleep sequence
-              //   // Clear last 2 bits   // Set the right state 
-              flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-            } 
-            break;
-          }
-        } // END Switch arm states
-      } // END If new target
+    switch(flag & STATE_BITMASK){
       
-      else{ // Interpolating a value OR going to interpolate
+      case PARSE_STATE:{
+        
+        // There's a command to execute
+        if(xQueueReceive(cmds_q, (void*)&cmd, 0) == pdTRUE){
+
+          switch(cmd[0]){
+            case 'd': // One of the default sequences shall be executed
+              flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+              break;
+            
+            case 'n': // Go to specific point
+              flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
+              break;
+              
+            case 'g': // Actuate gripper
+              flag = (flag & ~STATE_BITMASK) | GRIPPER_STATE;
+              break;
+            
+            case 'h': // Halt command, used to put the robotic arm into "sleep"
+              flag = (flag & ~STATE_BITMASK) | HALT_STATE;
+              break;
+  
+            default:{
+              Serial.println("UNKNOWN COMMAND"); 
+              break;
+            }
+          } // END Action decoding
+        }
+        
+        break;
+      } // END PARSE state
+      
+      case SEQUENCE_STATE:{
+        
+        // Not in sequence already ?
+        if(!(flag & IN_SEQUENCE_BITMASK)){
+          // determine which sequence to play
+          int idx_t = strtol(cmd+1, NULL, 10);
+          seq_idx = idx_t > NUM_SEQEUNCES ? 0 : idx_t;
+
+          // Repeat same sequence? --> no action required
+          if(seq_idx == prev_seq_idx){
+            
+            Serial.println("ALREADY IN POSITION");
+            
+            flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+            break;
+          }
+          else{
+            prev_seq_idx = seq_idx;
+            flag |= IN_SEQUENCE_BITMASK;
+          }
+
+          // Set sleep bitmask
+          if(seq_idx == 0) flag |= SLEEP_BITMASK;
+                        
+          Serial.printf("--- Sequence: %d ---\n", seq_idx);
+        }
+        
+        if(++seq_step == default_seq[seq_idx].len){ // End of sequence
+          flag &= ~IN_SEQUENCE_BITMASK;
+          seq_step = 0;
+        }
+        else{ // Still in sequence
+          target_x = default_seq[seq_idx].sequence[seq_step].x; // Refer to sequence.h
+          target_z = default_seq[seq_idx].sequence[seq_step].z;
+
+          Serial.printf("*** Targets :: X = %d, Z = %d ***\n", target_x, target_z);
+        }
+        flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
+
+        break;
+      } // END SEQUENCE state
+      
+      case HALT_STATE:{
+
+        if(flag & SLEEP_BITMASK){
+          
+          flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+          
+          Serial.println("Halting");
+        }
+        else{ // Not in sleep position
+
+          Serial.println("Not in sleep position!");
+          
+          memcpy(cmd, "d0000\0", CMD_LEN); // Apply sleep sequence
+          //   // Clear last 2 bits   // Set the right state 
+          flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+          flag &= ~IN_SEQUENCE_BITMASK;
+        } 
+        
+        break;
+      } // END HALT state
+    
+      case SINGLE_STATE:{
+        
+        memcpy(str_x, cmd+1, 2*sizeof(char)); // Parse 2nd and 3rd elements of cmd
+        memcpy(str_z, cmd+3, 2*sizeof(char)); // Parse 4th and 5th elements of cmd
+        str_x[2] = '\0';
+        str_z[2] = '\0';
+        
+        target_x = strtol(str_x, NULL, 10);
+        target_z = strtol(str_z, NULL, 10);
+
+        Serial.printf("*** Targets :: X = %d, Z = %d ***\n", target_x, target_z);
+        
+        // Interpolate and reach point
+        flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
+        
+        break;
+      } // END SINGLE state
+    
+      case ACTUATE_STATE:{
         
         // Interpolate (update ramp step)
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
         float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
-
+  
+        //Serial.printf("Interpolated --> X: %f, Z: %f\n", x, z);
+        
         // Calculate servo angles 
         angles = get_angles(x, z);
-      }
-
-      actuate_servos(angles);
-
-      // Reached point ?
-      if(interp_x.finished() && interp_z.finished()){
-        
-        // Am I in a sequence ?
-        if(flag & IN_SEQUENCE_BITMASK){
-          flag |= NEW_TARGET_BITMASK;  // Set new target flag (target == next sequence step)
-        }
-        
-        // I'm not in a sequence AND I've reached the target --> no longer busy
-        else{
-          flag &= ~BUSY_BITMASK;
-        }
-      }
-    } // END If busy
-    
-    else{ // Not busy --> could parse commands
-      
-      // There's a command to execute
-      if(xQueueReceive(cmds_q, (void*)&cmd, 0) == pdTRUE){
-        switch(cmd[0]){
-          case 'd': // One of the default sequences shall be executed
-            flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-          break;
+  
+        actuate_servos(angles);
+  
+        // Reached point ?
+        if(interp_x.finished() && interp_z.finished()){
+  
+          Serial.println("--- REACHED POINT ---");
           
-          case 'n': // Go to specific point
-            flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
-            break;
+          // Am I in a sequence ?
+          if(flag & IN_SEQUENCE_BITMASK) flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+          
+          // I'm not in a sequence AND I've reached the target
+          else{
             
-          case 'g': // Actuate gripper
-            flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
-            flag |= GRIPPER_BITMASK; // Set gripper flag
-            break;
-          
-          case 'h': // Halt command, used to put the robotic arm into "sleep"
-            flag = (flag & ~STATE_BITMASK) | HALT_STATE;
-            break;
-        }
-        flag |= 1 << 7;               // Set the busy flag
-        flag |= NEW_TARGET_BITMASK;   // Set the new target falg
+            flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+  
+            Serial.println("------------------------");
+            Serial.println("--- DONE WITH ACTION ---");
+            Serial.println("------------------------");
+          }
+        } // END If reached point
+        
+        break;
+      } // END ACTUATE state
+
+      case GRIPPER_STATE:{
+
+        char percentage[4];
+        float grip_p = 100;
+        memcpy(percentage, cmd+2, 3);
+        percentage[3] = '\0';
+
+        Serial.println(percentage);
+        
+        grip_p = strtol(percentage, NULL, 10);
+        
+        // Cap the grip percentage to 100%
+        grip_p = grip_p > 100 ? 1 : grip_p / 100;
+        
+        // Apply grip action
+        grip(cmd[1], grip_p);
+
+        flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+        
+        break;
       }
-    } // END Not busy
-  }
+      
+    } // END Switch arm states
+  } // END SUPER LOOP
 }
 
 /*********************************************************************/
@@ -199,7 +261,9 @@ void arm(void *params){
 
 // Add command to the commands' queue (to be called by the main code)
 bool assign_cmd(char command[CMD_LEN]){
-  return xQueueSend(cmds_q, (void*)&command, 0) == pdTRUE; // We successfully added the cmd
+  char temp[CMD_LEN];
+  strcpy(temp, command);
+  return xQueueSend(cmds_q, (void*)&temp, 0) == pdTRUE; // We successfully added the cmd
 }
 
 // Return error messages (to be called by the main code)
@@ -221,21 +285,22 @@ bool log_error(char *err){
 /*********************************************************************/
 
 // Actuate gripper
-void grip(char open_, uint8_t perc){
+void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
-      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
+      Serial.printf("CLOSING Gripper to %f percent\n", 100*perc);
+      //gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     case '1':{ // Open gripper
-      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
+      Serial.printf("OPENING Gripper to %f percent\n", 100*perc);
+      //gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     default:{  // Invalid input
-      /* CODE HERE */
-      // Maybe return error code ?
+      Serial.printf("INVALID GRIPPING\n");
       break;
     }
   }
@@ -251,7 +316,11 @@ void setup_servos(){
 
 // Apply actions to servos
 void actuate_servos(float *ang){
+
+  //Serial.println("ACTUATING SERVOS");
+  /*
   shoulder_servo.actuate(ang[0]);
   elbow_servo.actuate(ang[1]);
   wrist_servo.actuate(ang[2]);
+  */
 }
