@@ -28,7 +28,7 @@ void print_messages(void *params){
 }
 
 //
-void cmd_parser(void *params){
+void ser_cmd_parser(void *params){
     
   // Testing
   char s[6];
@@ -43,12 +43,10 @@ void cmd_parser(void *params){
       }
       else{
         s[idx] = '\0';
-
-        /*
-        char buff[24];
-        sprintf(buff, "N° char: %d --- %s ---", idx+1, s);
+        
+        char buff[6];
+        sprintf(buff, "Received --- %s --- N° of char(s): %d ---", idx+1, s);
         xQueueSend(msg_q, (void*)&buff, 0);
-        */
         
         idx = 0;
         assign_cmd(s);
@@ -80,9 +78,18 @@ void setup() {
                             1,               // Task priority (0 to configMAX_PRIORITIES -1)
                             NULL,            // Task handle
                             tskNO_AFFINITY); // Run on any core available
+  
+    // 2nd Task --> Parser of commands coming from serial port 
+    xTaskCreatePinnedToCore(ser_cmd_parser,             
+                            "CMD",           
+                            1024,            // Stack size (bytes in ESP32, words in FreeRTOS)
+                            NULL,            // Params to pass to function
+                            1,               // Task priority (0 to configMAX_PRIORITIES -1)
+                            NULL,            // Task handle
+                            pro_cpu);        // Pin to core 0
   #endif // DEBUG
 
-  // 2nd Task --> Arm controller (arm.h[arm.cpp])
+  // 1st main Task --> Arm controller (arm.h[arm.cpp])
   xTaskCreatePinnedToCore(arm,             // Function to run
                           "ARM",           // Name of task
                           5000,           // Stack size (bytes in ESP32, words in FreeRTOS)
@@ -90,15 +97,6 @@ void setup() {
                           1,               // Task priority (0 to configMAX_PRIORITIES -1)
                           NULL,            // Task handle
                           app_cpu);        // Pin to core 1
-
-  // 2nd Task --> Arm controller (arm.h[arm.cpp])
-  xTaskCreatePinnedToCore(cmd_parser,             // Function to run
-                          "CMD",           // Name of task
-                          2048,           // Stack size (bytes in ESP32, words in FreeRTOS)
-                          NULL,            // Params to pass to function
-                          1,               // Task priority (0 to configMAX_PRIORITIES -1)
-                          NULL,            // Task handle
-                          pro_cpu);        // Pin to core 0
 
   // Delete setup and loop tasks
   vTaskDelete(NULL);
