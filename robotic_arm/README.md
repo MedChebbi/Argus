@@ -32,6 +32,17 @@ My approach was:
 - 3rd step: Calculate the **Gamma** angle
 - 4th step: Calculate the **Shoulder**, **Elbow**, and **Wrist** angles
 
+## Test and progress
+
+<img src="images/demo.gif" width=640>
+
+> Running demo of the logic flow
+
 ## Implementation
 
-This is a work-in-progress and minimal advancements have been made in the code, except for the serial printing task, the two main tasks are still in dev phase.
+~This is a work-in-progress and minimal advancements have been made in the code, except for the serial printing task, the two main tasks are still in dev phase.~
+
+The arm animation task have been mostly implemented except for the servo actuation. Otherwise, a serial command parsing task have been implemented for testing purposes but the real task is to be implemented next (will communicate with ROS).
+
+
+
