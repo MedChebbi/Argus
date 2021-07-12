@@ -15,7 +15,7 @@ The **robotic arm driver** is designed to receive **4 different types of command
 
 This diagram is a primary design for the software:
 
-<img src="images/sys_design.png">
+<img src="images/NEW_sys_design.png">
 
 > System design diagram
  
