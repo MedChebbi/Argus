@@ -20,11 +20,11 @@
 SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
                 {
-                 .id_ = "0000", // First sequence id
-                 .len = 12, 
+                 .id_ = "0000",
+                 .len = 4, 
                  .sequence = {  // Points' sequence to target (centimeter)
-                     {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
-                     {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
+                     {0, 0}, {3, 3}, {4, 4}, {4, 4}, {0, 0}, {0, 0},
+                     {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
                   }
                 },
 
@@ -33,8 +33,8 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
                  .id_ = "0001", 
                  .len = 12,
                  .sequence = {
-                     {0, 0}, {3, 3}, {4, 4}, {4, 4}, {4, 4}, {4, 4},
-                     {1, 1}, {2, 2}, {8, 8}, {4, 4}, {4, 4}, {9, 9}
+                     {0, 0}, {3, 3}, {4, 4}, {4, 2}, {4, 7}, {4, 4},
+                     {1, 1}, {2, 2}, {8, 8}, {4, 11}, {4, 0}, {9, 12}
                   }
                 },
 }; // End of default_seq initialization
@@ -42,10 +42,12 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
 static QueueHandle_t log_q;           // Log error messages inside this queue
-Interpolation interp_x;               // Interpolation objects
-Interpolation interp_z;
 float *angles;                        // Arm angles to be calculated
 char err_buf[LOG_BUFF_LEN];           // Error reporter buff
+
+// Interpolation objects
+Interpolation interp_x;
+Interpolation interp_z;
 
 // Servo objects    // [min_range, max_range, timer, pin]
 ARMServo shoulder_servo(500, 2500, TIMER_1, SERVO_SHOULDER);
@@ -75,7 +77,7 @@ void arm(void *params){
   int prev_seq_idx;
   uint8_t seq_step = 0;               // Keeps track of the current sequence step
   
-  // FLAG(8 bits): {busy, gripper, --, sleep state, new target, in sequence , state [3 bits]} 
+  // FLAG(8 bits): {--, --, sleep state, --, in sequence, state [3 bits]} 
   uint8_t flag = PARSE_STATE;
   
   while(1){
@@ -84,32 +86,7 @@ void arm(void *params){
       case PARSE_STATE:{
         
         // There's a command to execute
-        if(xQueueReceive(cmds_q, (void*)&cmd, 0) == pdTRUE){
-
-          switch(cmd[0]){
-            case 'd': // One of the default sequences shall be executed
-              flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-              break;
-            
-            case 'n': // Go to specific point
-              flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
-              break;
-              
-            case 'g': // Actuate gripper
-              flag = (flag & ~STATE_BITMASK) | GRIPPER_STATE;
-              break;
-            
-            case 'h': // Halt command, used to put the robotic arm into "sleep"
-              flag = (flag & ~STATE_BITMASK) | HALT_STATE;
-              break;
-  
-            default:{
-              Serial.println("UNKNOWN COMMAND"); 
-              break;
-            }
-          } // END Action decoding
-        }
-        
+        if(xQueueReceive(cmds_q, (void*)&cmd, 0) == pdTRUE) flag = decode_action(flag, cmd[0]);
         break;
       } // END PARSE state
       
@@ -123,9 +100,7 @@ void arm(void *params){
 
           // Repeat same sequence? --> no action required
           if(seq_idx == prev_seq_idx){
-            
-            Serial.println("ALREADY IN POSITION");
-            
+            //Serial.println("ALREADY IN POSITION");
             flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
             break;
           }
@@ -135,9 +110,8 @@ void arm(void *params){
           }
 
           // Set sleep bitmask
-          if(seq_idx == 0) flag |= SLEEP_BITMASK;
-                        
-          Serial.printf("--- Sequence: %d ---\n", seq_idx);
+          if(seq_idx == 0) flag |= SLEEP_BITMASK;            
+          //Serial.printf("--- SEQUENCE: %d ---\n", seq_idx);
         }
         
         if(++seq_step == default_seq[seq_idx].len){ // End of sequence
@@ -145,10 +119,10 @@ void arm(void *params){
           seq_step = 0;
         }
         else{ // Still in sequence
-          target_x = default_seq[seq_idx].sequence[seq_step].x; // Refer to sequence.h
+          target_x = default_seq[seq_idx].sequence[seq_step].x;
           target_z = default_seq[seq_idx].sequence[seq_step].z;
 
-          Serial.printf("*** Targets :: X = %d, Z = %d ***\n", target_x, target_z);
+          //Serial.printf("*** TARGET POINT: (X = %d, Z = %d) ***\n", target_x, target_z);
         }
         flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
 
@@ -157,22 +131,13 @@ void arm(void *params){
       
       case HALT_STATE:{
 
-        if(flag & SLEEP_BITMASK){
-          
-          flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
-          
-          Serial.println("Halting");
-        }
+        if(flag & SLEEP_BITMASK) flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
         else{ // Not in sleep position
-
-          Serial.println("Not in sleep position!");
-          
           memcpy(cmd, "d0000\0", CMD_LEN); // Apply sleep sequence
           //   // Clear last 2 bits   // Set the right state 
           flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
           flag &= ~IN_SEQUENCE_BITMASK;
         } 
-        
         break;
       } // END HALT state
     
@@ -185,12 +150,15 @@ void arm(void *params){
         
         target_x = strtol(str_x, NULL, 10);
         target_z = strtol(str_z, NULL, 10);
-
-        Serial.printf("*** Targets :: X = %d, Z = %d ***\n", target_x, target_z);
+        
+        //Serial.printf("*** TARGET POINT: (X = %d, Z = %d) ***\n", target_x, target_z);
         
         // Interpolate and reach point
         flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
-        
+
+        // To indicate that we moved from our previous position
+        prev_seq_idx = -1; 
+        flag &= ~SLEEP_BITMASK;
         break;
       } // END SINGLE state
     
@@ -200,32 +168,15 @@ void arm(void *params){
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
         float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
   
-        //Serial.printf("Interpolated --> X: %f, Z: %f\n", x, z);
-        
         // Calculate servo angles 
         angles = get_angles(x, z);
-  
         actuate_servos(angles);
-  
+
         // Reached point ?
         if(interp_x.finished() && interp_z.finished()){
-  
-          Serial.println("--- REACHED POINT ---");
-          
-          // Am I in a sequence ?
           if(flag & IN_SEQUENCE_BITMASK) flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-          
-          // I'm not in a sequence AND I've reached the target
-          else{
-            
-            flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
-  
-            Serial.println("------------------------");
-            Serial.println("--- DONE WITH ACTION ---");
-            Serial.println("------------------------");
-          }
-        } // END If reached point
-        
+          else flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+        }
         break;
       } // END ACTUATE state
 
@@ -235,24 +186,48 @@ void arm(void *params){
         float grip_p = 100;
         memcpy(percentage, cmd+2, 3);
         percentage[3] = '\0';
-
-        Serial.println(percentage);
-        
         grip_p = strtol(percentage, NULL, 10);
+        grip_p = grip_p > 100 ? 1 : grip_p / 100; // Cap the grip percentage to 100%
         
-        // Cap the grip percentage to 100%
-        grip_p = grip_p > 100 ? 1 : grip_p / 100;
+        grip(cmd[1], grip_p); // [Open/Close, Percentage]
         
-        // Apply grip action
-        grip(cmd[1], grip_p);
-
         flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
-        
         break;
-      }
-      
+      } // END GRIP state
     } // END Switch arm states
   } // END SUPER LOOP
+}
+
+/*********************************************************************/
+// Decoding functions
+/*********************************************************************/
+
+// Decode commands to figure the state
+uint8_t decode_action(uint8_t flag, char c){
+  switch(c){
+    case 'd': // One of the default sequences shall be executed
+      flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+      break;
+    
+    case 'n': // Go to specific point
+      flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
+      break;
+      
+    case 'g': // Actuate gripper
+      flag = (flag & ~STATE_BITMASK) | GRIPPER_STATE;
+      break;
+    
+    case 'h': // Halt command, used to put the robotic arm into "sleep"
+      flag = (flag & ~STATE_BITMASK) | HALT_STATE;
+      break;
+
+    default:{
+      //log_error("UNKNOWN COMMAND"); 
+      //Serial.println("UNKNOWN COMMAND");
+      break;
+    }
+  }
+  return flag;
 }
 
 /*********************************************************************/
@@ -262,7 +237,7 @@ void arm(void *params){
 // Add command to the commands' queue (to be called by the main code)
 bool assign_cmd(char command[CMD_LEN]){
   char temp[CMD_LEN];
-  strcpy(temp, command);
+  strcpy(temp, command); // This is a hack and shouldn't be done this way
   return xQueueSend(cmds_q, (void*)&temp, 0) == pdTRUE; // We successfully added the cmd
 }
 
@@ -288,19 +263,19 @@ bool log_error(char *err){
 void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
-      Serial.printf("CLOSING Gripper to %f percent\n", 100*perc);
+      //Serial.printf("CLOSING Gripper to %.2f %%\n", 100*perc);
       //gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     case '1':{ // Open gripper
-      Serial.printf("OPENING Gripper to %f percent\n", 100*perc);
+      //Serial.printf("OPENING Gripper to %.2f %%\n", 100*perc);
       //gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     default:{  // Invalid input
-      Serial.printf("INVALID GRIPPING\n");
+      //Serial.printf("INVALID GRIPPING\n");
       break;
     }
   }
@@ -316,8 +291,6 @@ void setup_servos(){
 
 // Apply actions to servos
 void actuate_servos(float *ang){
-
-  //Serial.println("ACTUATING SERVOS");
   /*
   shoulder_servo.actuate(ang[0]);
   elbow_servo.actuate(ang[1]);
