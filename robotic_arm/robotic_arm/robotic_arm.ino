@@ -1,7 +1,7 @@
 #include "arm.h"
 
 // Configs
-#define DEBUG                   true // If ture, serial monitor will display stuff
+#define DEBUG                   true  // If ture, serial monitor will display stuff
 
 // max number of items the serial queue could hold
 #define QUEUE_LEN               10
@@ -13,6 +13,10 @@ static const BaseType_t app_cpu = 1;
 
 // Globals
 static QueueHandle_t msg_q; 
+
+/*********************************************************************/
+// DEBUG TASKS
+/*********************************************************************/
 
 // Serial printing task; No Serial call anywhere out of here 
 void print_messages(void *params){
@@ -27,14 +31,24 @@ void print_messages(void *params){
   }
 }
 
-//
+// This task checks for error logs reported by the robotic arm (& prints them)
+void check_log(void *params){
+  LOG_MSG msg;
+  while(1){
+    msg = get_log();
+    if(msg.have_log){
+      xQueueSend(msg_q, (void*)&msg.log_buf, 0);
+    }
+    // Yield to other tasks
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
+}
+
+// This task parses commands from the serial monitor for testing/debugging purposes
 void ser_cmd_parser(void *params){
-    
-  // Testing
-  char s[6];
+  char s[CMD_LEN];
   char c;
   int idx = 0;
-   
   while(1){
     if(Serial.available() > 0){
       c = Serial.read();
@@ -52,38 +66,12 @@ void ser_cmd_parser(void *params){
   }
 }
 
+/*********************************************************************/
+// END __ DEBUG TASKS
+/*********************************************************************/
 
 void setup() {
-  // Don't even include in code if we're not debugging
-  #if DEBUG 
-    // Configure Serial
-    Serial.begin(115200);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // Create serial queue
-    msg_q = xQueueCreate(QUEUE_LEN, BUFF_LEN);
-    
-    char str[BUFF_LEN] = "--- Robotic arm started ---";
-    xQueueSend(msg_q, (void*)&str, 0);
-    
-    // 1st Task --> Serial printer
-    xTaskCreatePinnedToCore(print_messages,  // Function to run
-                            "Print msgs",    // Name of task
-                            2048,            // Stack size (bytes in ESP32, words in FreeRTOS)
-                            NULL,            // Params to pass to function
-                            1,               // Task priority (0 to configMAX_PRIORITIES -1)
-                            NULL,            // Task handle
-                            tskNO_AFFINITY); // Run on any core available
   
-    // 2nd Task --> Parser of commands coming from serial port 
-    xTaskCreatePinnedToCore(ser_cmd_parser,             
-                            "CMD",           
-                            1024,            // Stack size (bytes in ESP32, words in FreeRTOS)
-                            NULL,            // Params to pass to function
-                            1,               // Task priority (0 to configMAX_PRIORITIES -1)
-                            NULL,            // Task handle
-                            pro_cpu);        // Pin to core 0
-  #endif // DEBUG
-
   // 1st main Task --> Arm controller (arm.h[arm.cpp])
   xTaskCreatePinnedToCore(arm,             // Function to run
                           "ARM",           // Name of task
@@ -92,6 +80,46 @@ void setup() {
                           1,               // Task priority (0 to configMAX_PRIORITIES -1)
                           NULL,            // Task handle
                           app_cpu);        // Pin to core 1
+                          
+  // Don't even include in code if we're not debugging
+  #if DEBUG 
+    // Configure Serial
+    Serial.begin(115200);
+    
+    // Create serial queue
+    msg_q = xQueueCreate(QUEUE_LEN, BUFF_LEN);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    
+    char str[BUFF_LEN] = "--- Robotic arm started ---";
+    xQueueSend(msg_q, (void*)&str, 0);
+    
+    // 1st Task (DEBUG) --> Serial printer
+    xTaskCreatePinnedToCore(print_messages,  // Function to run
+                            "Print msgs",    // Name of task
+                            2048,            // Stack size (bytes in ESP32, words in FreeRTOS)
+                            NULL,            // Params to pass to function
+                            1,               // Task priority (0 to configMAX_PRIORITIES -1)
+                            NULL,            // Task handle
+                            tskNO_AFFINITY); // Run on any core available
+  
+    // 2nd Task (DEBUG) --> Parser of commands coming from serial port 
+    xTaskCreatePinnedToCore(ser_cmd_parser,             
+                            "CMD",           
+                            1024,            // Stack size (bytes in ESP32, words in FreeRTOS)
+                            NULL,            // Params to pass to function
+                            1,               // Task priority (0 to configMAX_PRIORITIES -1)
+                            NULL,            // Task handle
+                            pro_cpu);        // Pin to core 0
+                            
+    // 3rd Task (DEBUG) --> Prints logs from the robotic arm
+    xTaskCreatePinnedToCore(check_log,             
+                            "LOG",           
+                            1024,            
+                            NULL,            
+                            1,               
+                            NULL,            
+                            tskNO_AFFINITY); 
+  #endif // DEBUG
 
   // Delete setup and loop tasks
   vTaskDelete(NULL);
