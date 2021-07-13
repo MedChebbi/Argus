@@ -1,31 +1,49 @@
 #include "servo_arm.h"
 
 // Constructor
-ARMServo :: ARMServo(int min_, int max_, uint8_t timer_, uint8_t pin_){
-  set_defaults(min_, max_, timer_, pin_);
+ARMServo :: ARMServo(uint8_t channel_, uint8_t range_){
+  set_defaults(channel_, range_);
 }
 
 // Assign private values
-void ARMServo :: set_defaults(int min_, int max_, uint8_t timer_, uint8_t pin_){
-  min_us = min_;  
-  max_us = max_;
-  timer = timer_;
-  pin = pin_;
+void ARMServo :: set_defaults(uint8_t channel_, uint8_t range_){
+  channel = channel_;
+  range   = range_;
+  
+  switch(range){
+    case _60_DEG_SERVO:
+      us_2_deg = U_SEC_PER_DEG_60;
+      break;
+    case _90_DEG_SERVO:
+      us_2_deg = U_SEC_PER_DEG_90;
+      break;
+    case _120_DEG_SERVO:
+      us_2_deg = U_SEC_PER_DEG_120;
+      break;
+    case _180_DEG_SERVO:
+      us_2_deg = U_SEC_PER_DEG_180;
+      break;
+    default:
+      us_2_deg = U_SEC_PER_DEG_180; 
+    break;
+  }
 }
 
-// Attach pins, attach PWM channels, and set PWM frequency
-void ARMServo :: setup_servo(){
-  ESP32PWM::allocateTimer(timer);
-  my_servo.setPeriodHertz(PWM_FREQUENCY);
-  my_servo.attach(pin, min_us, max_us);
+// Attach pin, PWM channel, and set PWM frequency
+void ARMServo :: attach_servo(uint8_t pin_){
+  attach_servo(pin_, DEFAULT_MIN_US, DEFAULT_MAX_US);
+}
+
+void ARMServo :: attach_servo(uint8_t pin_, int min_, int max_){
+  pin     = pin_;
+  min_us  = min_;  
+  max_us  = max_;
+  
+  ledcSetup(channel, PWM_FREQUENCY, RESOLUTION_8);
+  ledcAttachPin(pin, channel);
 }
 
 // Actuate the servo to certain angle
 void ARMServo :: actuate(int ang){
-  my_servo.write(ang);
-}
-
-// Release the ressources allocated for servo
-void ARMServo :: release_servo(){
-  my_servo.detach();
+  ledcWrite(channel, ang * us_2_deg);
 }
