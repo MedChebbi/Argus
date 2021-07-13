@@ -43,7 +43,6 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
 static QueueHandle_t log_q;           // Log error messages inside this queue
 float *angles;                        // Arm angles to be calculated
-char err_buf[LOG_BUFF_LEN];           // Error reporter buff
 
 // Interpolation objects
 Interpolation interp_x;
@@ -208,7 +207,7 @@ uint8_t decode_action(uint8_t flag, char c){
       return (flag & ~STATE_BITMASK) | HALT_STATE;
 
     default:{
-      log_error("UNKNOWN COMMAND"); 
+      log_error(UNKNOWN_LOG); 
       return flag;
     }
   }
@@ -226,15 +225,28 @@ bool assign_cmd(char command[CMD_LEN]){
 }
 
 // Return error messages (to be called by the main code)
-char* get_error(){
-  xQueueReceive(log_q, (void*)&err_buf, 0);
-  return err_buf;
+LOG_MSG get_log(){
+  LOG_MSG log_msg;
+  UBaseType_t n_msg = uxQueueMessagesWaiting(log_q);
+  if(n_msg > 0){
+    log_msg.have_log = xQueueReceive(log_q, (void*)&log_msg.log_buf, 0) == pdTRUE;
+  }
+  return log_msg;
 }
 
 // To be used by the arm task to log errors
-bool log_error(char *err){
-  if(strlen(err) > LOG_BUFF_LEN) return false;
-  return xQueueSend(log_q, (void*)&err, 0) == pdTRUE; // We successfully logged the error
+bool log_error(uint8_t err){
+  char err_buf[LOG_BUFF_LEN];
+  switch(err){
+    case INVALID_LOG: 
+      strcpy(err_buf, "INVALID COMMAND");
+      break;
+    case UNKNOWN_LOG: 
+      strcpy(err_buf, "UNKNOWN COMMAND");
+      break;
+    default: break;
+  }
+  return xQueueSend(log_q, (void*)&err_buf, 0) == pdTRUE; // We successfully logged the error
 }
 
 /*********************************************************************/
@@ -255,7 +267,7 @@ void grip(char open_, float perc){
     }
     
     default:{  // Invalid input
-      log_error("INVALID GRIPPING");
+      log_error(INVALID_LOG);
       break;
     }
   }
