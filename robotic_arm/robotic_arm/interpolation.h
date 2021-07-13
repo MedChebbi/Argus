@@ -8,7 +8,7 @@
   #include <Ramp.h> // https://github.com/siteswapjuggler/RAMP
 
   // Reach the target point in how many milliseconds
-  #define INTERPOLATION_TIME      1000 
+  #define INTERPOLATION_TIME      500 
 
   // 
   class Interpolation{
