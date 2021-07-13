@@ -43,11 +43,6 @@ void ser_cmd_parser(void *params){
       }
       else{
         s[idx] = '\0';
-        
-        char buff[6];
-        sprintf(buff, "Received --- %s --- N° of char(s): %d ---", idx+1, s);
-        xQueueSend(msg_q, (void*)&buff, 0);
-        
         idx = 0;
         assign_cmd(s);
       }
@@ -92,7 +87,7 @@ void setup() {
   // 1st main Task --> Arm controller (arm.h[arm.cpp])
   xTaskCreatePinnedToCore(arm,             // Function to run
                           "ARM",           // Name of task
-                          5000,           // Stack size (bytes in ESP32, words in FreeRTOS)
+                          2048,           // Stack size (bytes in ESP32, words in FreeRTOS)
                           NULL,            // Params to pass to function
                           1,               // Task priority (0 to configMAX_PRIORITIES -1)
                           NULL,            // Task handle
