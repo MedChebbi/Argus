@@ -52,12 +52,13 @@
       uint8_t pin;
       uint8_t range;
       uint8_t us_2_deg;
+
+      void set_defaults(uint8_t channel_, uint8_t range_);
       
     public:
       
       // Func prototypes
       ARMServo(uint8_t channel_, uint8_t range_);
-      void set_defaults(uint8_t channel_, uint8_t range_);
       void attach_servo(uint8_t pin_, int min_, int max_);
       void attach_servo(uint8_t pin_);
       void actuate(int ang);
