@@ -49,11 +49,11 @@ char err_buf[LOG_BUFF_LEN];           // Error reporter buff
 Interpolation interp_x;
 Interpolation interp_z;
 
-// Servo objects    // [min_range, max_range, timer, pin]
-ARMServo shoulder_servo(500, 2500, TIMER_1, SERVO_SHOULDER);
-ARMServo elbow_servo(500, 2500, TIMER_2, SERVO_ELBOW);
-ARMServo wrist_servo(500, 2500, TIMER_3, SERVO_WRIST);
-ARMServo gripper_servo(500, 2500, TIMER_4, SERVO_GRIPPER);
+// Servo objects    // [PWM channel, range°]
+ARMServo shoulder_servo(CHANNEL_0, _180_DEG_SERVO);
+ARMServo elbow_servo(CHANNEL_1, _180_DEG_SERVO);
+ARMServo wrist_servo(CHANNEL_2, _180_DEG_SERVO);
+ARMServo gripper_servo(CHANNEL_3, _180_DEG_SERVO);
 
 /*********************************************************************/
 // Main task --> Robotic arm animation
@@ -100,7 +100,6 @@ void arm(void *params){
 
           // Repeat same sequence? --> no action required
           if(seq_idx == prev_seq_idx){
-            //Serial.println("ALREADY IN POSITION");
             flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
             break;
           }
@@ -108,10 +107,7 @@ void arm(void *params){
             prev_seq_idx = seq_idx;
             flag |= IN_SEQUENCE_BITMASK;
           }
-
-          // Set sleep bitmask
-          if(seq_idx == 0) flag |= SLEEP_BITMASK;            
-          //Serial.printf("--- SEQUENCE: %d ---\n", seq_idx);
+          if(seq_idx == 0) flag |= SLEEP_BITMASK;
         }
         
         if(++seq_step == default_seq[seq_idx].len){ // End of sequence
@@ -121,8 +117,6 @@ void arm(void *params){
         else{ // Still in sequence
           target_x = default_seq[seq_idx].sequence[seq_step].x;
           target_z = default_seq[seq_idx].sequence[seq_step].z;
-
-          //Serial.printf("*** TARGET POINT: (X = %d, Z = %d) ***\n", target_x, target_z);
         }
         flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
 
@@ -147,11 +141,8 @@ void arm(void *params){
         memcpy(str_z, cmd+3, 2*sizeof(char)); // Parse 4th and 5th elements of cmd
         str_x[2] = '\0';
         str_z[2] = '\0';
-        
         target_x = strtol(str_x, NULL, 10);
         target_z = strtol(str_z, NULL, 10);
-        
-        //Serial.printf("*** TARGET POINT: (X = %d, Z = %d) ***\n", target_x, target_z);
         
         // Interpolate and reach point
         flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
@@ -167,8 +158,7 @@ void arm(void *params){
         // Interpolate (update ramp step)
         float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
         float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
-  
-        // Calculate servo angles 
+        
         angles = get_angles(x, z);
         actuate_servos(angles);
 
@@ -206,28 +196,22 @@ void arm(void *params){
 uint8_t decode_action(uint8_t flag, char c){
   switch(c){
     case 'd': // One of the default sequences shall be executed
-      flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-      break;
+      return (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
     
     case 'n': // Go to specific point
-      flag = (flag & ~STATE_BITMASK) | SINGLE_STATE;
-      break;
+      return (flag & ~STATE_BITMASK) | SINGLE_STATE;
       
     case 'g': // Actuate gripper
-      flag = (flag & ~STATE_BITMASK) | GRIPPER_STATE;
-      break;
+      return (flag & ~STATE_BITMASK) | GRIPPER_STATE;
     
     case 'h': // Halt command, used to put the robotic arm into "sleep"
-      flag = (flag & ~STATE_BITMASK) | HALT_STATE;
-      break;
+      return (flag & ~STATE_BITMASK) | HALT_STATE;
 
     default:{
-      //log_error("UNKNOWN COMMAND"); 
-      //Serial.println("UNKNOWN COMMAND");
-      break;
+      log_error("UNKNOWN COMMAND"); 
+      return flag;
     }
   }
-  return flag;
 }
 
 /*********************************************************************/
@@ -249,9 +233,7 @@ char* get_error(){
 
 // To be used by the arm task to log errors
 bool log_error(char *err){
-  if(strlen(err) > LOG_BUFF_LEN){
-    return false;
-  }
+  if(strlen(err) > LOG_BUFF_LEN) return false;
   return xQueueSend(log_q, (void*)&err, 0) == pdTRUE; // We successfully logged the error
 }
 
@@ -263,37 +245,34 @@ bool log_error(char *err){
 void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
-      //Serial.printf("CLOSING Gripper to %.2f %%\n", 100*perc);
-      //gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
+      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     case '1':{ // Open gripper
-      //Serial.printf("OPENING Gripper to %.2f %%\n", 100*perc);
-      //gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
+      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
       break;
     }
     
     default:{  // Invalid input
-      //Serial.printf("INVALID GRIPPING\n");
+      log_error("INVALID GRIPPING");
       break;
     }
   }
 }
 
 // Setup all servos
-void setup_servos(){
-  shoulder_servo.setup_servo();
-  elbow_servo.setup_servo();
-  wrist_servo.setup_servo();
-  gripper_servo.setup_servo();
+void setup_servos(){        
+  // (Pin, Min_us, Max_us)
+  shoulder_servo.attach_servo(SERVO_SHOULDER, 500, 2500);
+  elbow_servo.attach_servo(SERVO_ELBOW);
+  wrist_servo.attach_servo(SERVO_WRIST);
+  gripper_servo.attach_servo(SERVO_GRIPPER);
 }
 
 // Apply actions to servos
 void actuate_servos(float *ang){
-  /*
-  shoulder_servo.actuate(ang[0]);
-  elbow_servo.actuate(ang[1]);
-  wrist_servo.actuate(ang[2]);
-  */
+  shoulder_servo.actuate(*ang);
+  elbow_servo.actuate(*(ang+1));
+  wrist_servo.actuate(*(ang+2));
 }
