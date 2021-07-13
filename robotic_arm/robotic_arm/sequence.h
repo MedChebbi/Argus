@@ -10,7 +10,7 @@
 
     // Default sequences container 
     struct pair{
-      uint8_t x;     // Value in millimeter
+      uint8_t x;     // Value in centimeter
       uint8_t z;  
     }; // Holds the (x, z) point to go to
     
