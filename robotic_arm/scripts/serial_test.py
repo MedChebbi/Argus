@@ -49,4 +49,4 @@ while(True):
 	cmd = input() # Blocking
 	if(cmd):
 		write_ser(cmd)
-		print(f"Wrote: {cmd}")
+		#print(f"Wrote: {cmd}")
