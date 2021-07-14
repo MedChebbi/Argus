@@ -35,7 +35,7 @@
     uint8_t decode_action(uint8_t flag, char c);  // Decode commands to figure the state
     LOG_MSG get_log();                            // Returns the oldest error (queue)
     void grip(char open_, float perc);            // Actuate the gripper
-    bool log_error(uint8_t err);                  // Adds errors to the queue
+    bool report(uint8_t err);                     // Adds errors to the queue
     void setup_servos();                    
     
 #endif

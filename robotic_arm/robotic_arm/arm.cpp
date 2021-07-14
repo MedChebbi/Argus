@@ -112,6 +112,7 @@ void arm(void *params){
         if(++seq_step == default_seq[seq_idx].len){ // End of sequence
           flag &= ~IN_SEQUENCE_BITMASK;
           seq_step = 0;
+          report(SEQUENCE_DONE);
         }
         else{ // Still in sequence
           target_x = default_seq[seq_idx].sequence[seq_step].x;
@@ -164,7 +165,10 @@ void arm(void *params){
         // Reached point ?
         if(interp_x.finished() && interp_z.finished()){
           if(flag & IN_SEQUENCE_BITMASK) flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-          else flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+          else{report(ACTION_DONE);
+            report(ACTION_DONE);
+            flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+          }
         }
         break;
       } // END ACTUATE state
@@ -208,7 +212,7 @@ uint8_t decode_action(uint8_t flag, char c){
       return (flag & ~STATE_BITMASK) | HALT_STATE;
 
     default:{
-      log_error(UNKNOWN_LOG); 
+      report(UNKNOWN_LOG); 
       return flag;
     }
   }
@@ -236,14 +240,20 @@ LOG_MSG get_log(){
 }
 
 // To be used by the arm task to log errors
-bool log_error(uint8_t err){
+bool report(uint8_t err){
   char err_buf[LOG_BUFF_LEN];
   switch(err){
     case INVALID_LOG: 
-      strcpy(err_buf, "INVALID COMMAND");
+      strcpy(err_buf, "FAULTY COMMAND");
       break;
     case UNKNOWN_LOG: 
       strcpy(err_buf, "UNKNOWN COMMAND");
+      break;
+    case ACTION_DONE:
+      strcpy(err_buf, "ACTION DONE");
+      break;
+     case SEQUENCE_DONE:
+      strcpy(err_buf, "SEQUENCE DONE");
       break;
     default: break;
   }
@@ -259,16 +269,18 @@ void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
       gripper_servo.actuate(MAX_GRIP_ANG + (perc * MID_GRIP_ANG)); 
+      report(ACTION_DONE); 
       break;
     }
     
     case '1':{ // Open gripper
       gripper_servo.actuate(MAX_GRIP_ANG - (perc * MID_GRIP_ANG));
+      report(ACTION_DONE);
       break;
     }
     
     default:{  // Invalid input
-      log_error(INVALID_LOG);
+      report(INVALID_LOG);
       break;
     }
   }
