@@ -75,13 +75,17 @@ void setup() {
   // 1st main Task --> Arm controller (arm.h[arm.cpp])
   xTaskCreatePinnedToCore(arm,             // Function to run
                           "ARM",           // Name of task
-                          2048,           // Stack size (bytes in ESP32, words in FreeRTOS)
+                          2048,            // Stack size (bytes in ESP32, words in FreeRTOS)
                           NULL,            // Params to pass to function
                           1,               // Task priority (0 to configMAX_PRIORITIES -1)
                           NULL,            // Task handle
                           app_cpu);        // Pin to core 1
                           
-  // Don't even include in code if we're not debugging
+  /************************************************************************************** 
+   * The logs printing task reads from a queue that would be created by the arm task    *
+   * --> I should probably make a mutex that would not allow it to read until the queue *
+   * is created, but for now, I just put the arm task creation at first and all is good *
+   **************************************************************************************/
   #if DEBUG 
     // Configure Serial
     Serial.begin(115200);

@@ -40,7 +40,8 @@
   #define DEFAULT_MAX_US          2000
     
   // 
-  #define MAX_GRIP_ANG            60    // The maximum angle the gripper could open
+  #define MID_GRIP_ANG            40    // The angle at which the gripper is closed
+  #define MAX_GRIP_ANG            20    // The max angle the gripper could open/close
 
   // Custom servo class
   class ARMServo{
