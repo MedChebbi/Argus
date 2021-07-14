@@ -46,7 +46,7 @@ while(True):
 	if(len(read_data)):
 		print(read_data)
 
-	cmd = input()
+	cmd = input() # Blocking
 	if(cmd):
 		write_ser(cmd)
 		print(f"Wrote: {cmd}")
