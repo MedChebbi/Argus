@@ -97,7 +97,7 @@ void arm(void *params){
           int idx_t = strtol(cmd+1, NULL, 10);
           seq_idx = idx_t > NUM_SEQEUNCES ? 0 : idx_t;
 
-          // Repeat same sequence? --> no action required
+          // Repeating same sequence? --> no action required
           if(seq_idx == prev_seq_idx){
             flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
             break;
@@ -178,7 +178,8 @@ void arm(void *params){
         grip_p = strtol(percentage, NULL, 10);
         grip_p = grip_p > 100 ? 1 : grip_p / 100; // Cap the grip percentage to 100%
         
-        grip(cmd[1], grip_p); // [Open/Close, Percentage]
+        // (Open/Close, Percentage)
+        grip(cmd[1], grip_p); 
         
         flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
         break;
@@ -257,12 +258,12 @@ bool log_error(uint8_t err){
 void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
-      gripper_servo.actuate(perc * MAX_GRIP_ANG); // Gotta check the sign of action
+      gripper_servo.actuate(MAX_GRIP_ANG + (perc * MID_GRIP_ANG)); 
       break;
     }
     
     case '1':{ // Open gripper
-      gripper_servo.actuate(perc * -1 * MAX_GRIP_ANG); // Gotta check the sign of action
+      gripper_servo.actuate(MAX_GRIP_ANG - (perc * MID_GRIP_ANG));
       break;
     }
     

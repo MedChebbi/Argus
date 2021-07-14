@@ -5,15 +5,12 @@
     #include "trigonometry.h"
     #include "servo_arm.h"
     #include "sequence.h"
+    #include "log_err.h"
     #include "Arduino.h"
   
     // Commands queue
     #define CMD_QUEUE_LEN           24    // How many commands to hold
     #define CMD_LEN                 6     // How long each commands will be (max length)
-
-    // Error log queue
-    #define LOG_QUEUE_LEN           6     // How many error messages to hold
-    #define LOG_BUFF_LEN            24    // How long each error msg will be (max length)
 
     // Bitmasks for the flags
     #define UNUSED_BITMASK_1        0x80   
@@ -30,25 +27,16 @@
     #define PARSE_STATE             3
     #define ACTUATE_STATE           4
     #define GRIPPER_STATE           5
-
-    // LOGGING CODES
-    #define INVALID_LOG             0
-    #define UNKNOWN_LOG             1
-
-    struct LOG_MSG{
-      bool have_log = false;
-      char log_buf[LOG_BUFF_LEN];         // Error reporter buff
-    };
     
-    // Func prototypes                    
-    void setup_servos();                    
-    uint8_t decode_action(uint8_t flag, char c);  // Decode commands to figure the state
-    bool assign_cmd(char command[CMD_LEN]);       // Assign commands to the robotic arm
-    void arm(void *params);                       // Animate the robotic arm
-    void grip(char open_, float perc);            // Actuate the gripper
+    // Func prototypes     
     void actuate_servos(float *ang);
+    void arm(void *params);                       // Animate the robotic arm
+    bool assign_cmd(char command[CMD_LEN]);       // Assign commands to the robotic arm
+    uint8_t decode_action(uint8_t flag, char c);  // Decode commands to figure the state
     LOG_MSG get_log();                            // Returns the oldest error (queue)
+    void grip(char open_, float perc);            // Actuate the gripper
     bool log_error(uint8_t err);                  // Adds errors to the queue
-
+    void setup_servos();                    
+    
 #endif
   
