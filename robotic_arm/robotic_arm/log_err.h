@@ -8,8 +8,9 @@
     // LOGGING CODES
     #define INVALID_LOG             0
     #define UNKNOWN_LOG             1
-    #define ACTION_DONE             2
+    #define GRIPPING_DONE           2
     #define SEQUENCE_DONE           3
+    #define POINT_REACHED           4
 
     struct LOG_MSG{
       bool have_log = false;
