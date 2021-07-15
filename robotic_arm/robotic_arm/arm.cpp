@@ -16,6 +16,7 @@
 
 #include "arm.h"
 
+/*
 // Define any sequence of 12 points desired (refer to sequence.h)
 SEQUENCE default_seq[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
@@ -38,6 +39,29 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
                   }
                 },
 }; // End of default_seq initialization
+*/
+
+CMD_SEQUENCE cmd_sequence[NUM_SEQEUNCES] = {
+                // First sequence (dedicated to sleep position)
+                {
+                 .id_  = "0000",
+                 .len  = 4, 
+                 .cmd_ = {  // Commands' sequence to target 
+                     "n0000", "n1515", "g0050", "n1232", "g1100", "g0050",
+                     "n0000", "n0000", "g0050", "n1200", "n1515", "g0050",
+                  }
+                },
+
+                // Second sequence
+                {
+                 .id_  = "0001",
+                 .len  = 5, 
+                 .cmd_ = {  // Commands' sequence to target 
+                     "n7777", "n3333", "g1750", "n0000", "g0100", "g0050",
+                     "n0000", "n0000", "g0050", "n1200", "n1515", "g0050",
+                  }
+                },
+}; // End of cmd_seq initialization
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
@@ -109,16 +133,21 @@ void arm(void *params){
           if(seq_idx == 0) flag |= SLEEP_BITMASK;
         }
         
-        if(++seq_step == default_seq[seq_idx].len){ // End of sequence
+        if(seq_step == cmd_sequence[seq_idx].len){ // End of sequence
           flag &= ~IN_SEQUENCE_BITMASK;
           seq_step = 0;
+          flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
           report(SEQUENCE_DONE);
         }
         else{ // Still in sequence
+          /*
           target_x = default_seq[seq_idx].sequence[seq_step].x;
           target_z = default_seq[seq_idx].sequence[seq_step].z;
+          */
+          // Get new command in sequence
+          strcpy(cmd, cmd_sequence[seq_idx].cmd_[seq_step++]);
+          flag = decode_action(flag, cmd[0]);
         }
-        flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
 
         break;
       } // END SEQUENCE state
@@ -143,12 +172,12 @@ void arm(void *params){
         str_z[2] = '\0';
         target_x = strtol(str_x, NULL, 10);
         target_z = strtol(str_z, NULL, 10);
-        
+
         // Interpolate and reach point
         flag = (flag & ~STATE_BITMASK) | ACTUATE_STATE;
 
         // To indicate that we moved from our previous position
-        prev_seq_idx = -1; 
+        if(!(flag & IN_SEQUENCE_BITMASK)) prev_seq_idx = -1; 
         flag &= ~SLEEP_BITMASK;
         break;
       } // END SINGLE state
@@ -164,11 +193,9 @@ void arm(void *params){
 
         // Reached point ?
         if(interp_x.finished() && interp_z.finished()){
+          report(POINT_REACHED);
           if(flag & IN_SEQUENCE_BITMASK) flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
-          else{report(ACTION_DONE);
-            report(ACTION_DONE);
-            flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
-          }
+          else flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
         }
         break;
       } // END ACTUATE state
@@ -185,7 +212,9 @@ void arm(void *params){
         // (Open/Close, Percentage)
         grip(cmd[1], grip_p); 
         
-        flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+        if(flag & IN_SEQUENCE_BITMASK) flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
+        else flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
+        
         break;
       } // END GRIP state
     } // END Switch arm states
@@ -249,12 +278,15 @@ bool report(uint8_t err){
     case UNKNOWN_LOG: 
       strcpy(err_buf, "UNKNOWN COMMAND");
       break;
-    case ACTION_DONE:
-      strcpy(err_buf, "ACTION DONE");
+    case GRIPPING_DONE:
+      strcpy(err_buf, "GRIPPING DONE");
       break;
-     case SEQUENCE_DONE:
+    case SEQUENCE_DONE:
       strcpy(err_buf, "SEQUENCE DONE");
       break;
+    case POINT_REACHED:
+      strcpy(err_buf, "POINT REACHED");
+      break; 
     default: break;
   }
   return xQueueSend(log_q, (void*)&err_buf, 0) == pdTRUE; // We successfully logged the error
@@ -269,13 +301,13 @@ void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
       gripper_servo.actuate(MAX_GRIP_ANG + (perc * MID_GRIP_ANG)); 
-      report(ACTION_DONE); 
+      report(GRIPPING_DONE); 
       break;
     }
     
     case '1':{ // Open gripper
       gripper_servo.actuate(MAX_GRIP_ANG - (perc * MID_GRIP_ANG));
-      report(ACTION_DONE);
+      report(GRIPPING_DONE);
       break;
     }
     
