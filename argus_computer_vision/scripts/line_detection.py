@@ -11,9 +11,11 @@ import numpy as np
 from sensor_msgs.msg import Image
 from argus_msgs.msg import LineInfo
 
-from intersection_detection import LineStateClassifier
 from argus_computer_vision.cfg import lineParamConfig
 from dynamic_reconfigure.server import Server
+
+from intersection_detection import LineStateClassifier
+
 
 class LineDetector:
     """docstring for ."""
@@ -44,9 +46,11 @@ class LineDetector:
         srv = Server(lineParamConfig, self.reconfig)
         self.sub = rospy.Subscriber("camera/image_raw", Image, self.callback, queue_size = 1, buff_size=2**24)
 
+
     def publish(self):
         self.pub.publish(self.img)
         self.pub2.publish(self.msg)
+
 
     def shutdown(self):
         self.msg.detected = False
@@ -57,6 +61,7 @@ class LineDetector:
     def reconfig(self, config, level):
         self.line_param = config
         return config
+
 
     def callback(self, data):
         try:
@@ -103,6 +108,7 @@ class LineDetector:
             '''
         except CvBridgeError as e:
             rospy.logwarn(e)
+
 
     def detBlack(self, imgWarped, draw = True):
         black_detected = False
@@ -188,19 +194,22 @@ class LineDetector:
                 cv2.putText(image, centertext, (200,340), cv2.FONT_HERSHEY_SIMPLEX, 1, self.RED,2)
                 cv2.circle(image, (WIDTH//2, HEIGHT//2),5, self.BLUE,cv2.FILLED)
                 cv2.line(image, (int(x_min), 200), (int(x_min), 250),self.BLUE,3)
-            needed_info.append(black_detected)
+            
             self.error = error//coff
             self.ang = ang
-            needed_info.append(self.error)
-            needed_info.append(self.ang)
+            
         else :
             black_detected = False
-            needed_info.append(black_detected)
-            needed_info.append(self.error)
-            needed_info.append(self.ang)
+            
+        needed_info.append(black_detected)
+        needed_info.append(self.error)
+        needed_info.append(self.ang)
+
         if draw: cv2.putText(image,"State: "+self.msg.state, (10,80),
                              cv2.FONT_HERSHEY_SIMPLEX, 1, self.RED,2)
+
         return image, Blackline, needed_info
+
 
     def warpImg (self,img,points):
         # print(points)
@@ -211,10 +220,12 @@ class LineDetector:
         imgWarp = cv2.warpPerspective(img,matrix,(self.width,self.height))
         return imgWarp
 
+
 def drawPoints(img,points):
     for x in range(4):
         cv2.circle(img,(int(points[x][0]),int(points[x][1])),5,(0,0,255),cv2.FILLED)
     return img
+
 
 def reorder(myPoints):
 	myPoints = myPoints.reshape((4, 2))
@@ -227,8 +238,9 @@ def reorder(myPoints):
 	myPointsNew[2] = myPoints[np.argmax(diff)]
 	return myPointsNew
 
+
 def set_default_params():
-    rospy.set_param('classifier/running', True)
+    rospy.set_param('classifier/running', False)
     rospy.set_param('classifier/input_shape', [64,64,1])
     rospy.set_param('classifier/number_classes', 6)
     rospy.set_param('classifier/class_names', ['straight', 'x', 'T', 'left', 'right', 'end'])
@@ -237,6 +249,7 @@ def set_default_params():
     rospy.set_param('classifier/model_path', '/home/mohamed/robolympix/argus_ws/src/argus_computer_vision/scripts/models/model_grayscale.tflite')
     rospy.set_param('classifier/on_edge', False)
     rospy.set_param('classifier/debug', True)
+
 
 if __name__ == '__main__':
     rospy.init_node("line_detection")

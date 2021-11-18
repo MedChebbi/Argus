@@ -5,7 +5,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
 from argus_msgs.msg import LineInfo
-from argus_base.cfg import pidParamConfig
+from argus_control.cfg import pidParamConfig
 from dynamic_reconfigure.server import Server
 
 class Controller(object):
