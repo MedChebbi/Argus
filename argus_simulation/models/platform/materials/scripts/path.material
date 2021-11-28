@@ -9,7 +9,7 @@
           specular 0.0 0.0 0.0 1.0 0.5
           texture_unit
           {
-            texture MyImage.png
+            texture Map1.jpg
           }
         }
       }
