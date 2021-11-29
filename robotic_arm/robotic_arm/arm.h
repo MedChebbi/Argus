@@ -9,24 +9,22 @@
     #include "Arduino.h"
   
     // Commands queue
-    #define CMD_QUEUE_LEN           24    // How many commands to hold
-    #define CMD_LEN                 6     // How long each commands will be (max length)
+    #define CMD_QUEUE_LEN           24        // How many commands to hold
+    #define CMD_LEN                 (1+3+3+1) // How long each commands will be (max length) 
+                                              // cmd_char, first digit, second digit, '\0'
 
     // Bitmasks for the flags
     #define UNUSED_BITMASK_1        0x80   
     #define UNUSED_BITMASK_2        0x40   
-    #define SLEEP_BITMASK           0x20  // whether in sleep position or not
+    #define SLEEP_BITMASK           0x20      // whether in sleep position or not
     #define UNUSED_BITMASK_3        0x10   
-    #define IN_SEQUENCE_BITMASK     0x08  // Not done with sequence/move yet
-    #define STATE_BITMASK           0x07  // 3 last bits for the state of the machine
+    #define IN_SEQUENCE_BITMASK     0x08      // Not done with sequence/move yet
+    #define STATE_BITMASK           0x07      // 3 last bits for the state of the machine
+
+    #define COORDINATE_LEN          (1+3) // Each point is 3 digits long + '\0'
     
     // States of the machine
-    #define SEQUENCE_STATE          0
-    #define SINGLE_STATE            1
-    #define HALT_STATE              2
-    #define PARSE_STATE             3
-    #define ACTUATE_STATE           4
-    #define GRIPPER_STATE           5
+    enum{SEQUENCE_STATE, SINGLE_STATE, HALT_STATE, PARSE_STATE, ACTUATE_STATE, GRIPPER_STATE};
     
     // Func prototypes     
     void actuate_servos(float *ang);
