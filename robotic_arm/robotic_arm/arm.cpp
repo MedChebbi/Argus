@@ -1,17 +1,19 @@
 /*
  * Designed the robotic arm to receive commands through a queue,
  * There're 4 types of commands:
- *           --> "d****\0" : if the command starts with a 'd' char, the robotic
- *           |               arm is to go through the sequence of points with 
- *           |               id_ == "****\0" (* : char)
- *           --> "n****\0" : if the command starts with a 'n' char, the robotic 
- *           |               arm is to go to the point X = **(1st 2*), Z = ** (2nd 2*)
- *           --> "g****\0" : if the command starts with a 'g' char, the robotic 
- *           |               is to actuate the gripper with Open = * (1st *), and 
- *           |               percentage of opening/closing == ***% (2nd, 3rd, 4th *)
- *           --> "h****\0" : if the command starts with a 'h' char, the robotic 
- *                           is to halt and enter "sleep mode" but before that it shall
- *                           take the default position 0000 (reserved for "closed")
+ *           --> "d******\0"   : if the command starts with a 'd' char, the robotic
+ *           |                   arm is to go through the sequence of points with 
+ *           |                   id_ == "******\0" (* : char)
+ *           --> "n******\0" : if the command starts with a 'n' char, the robotic 
+ *           |                 arm is to go to the point X = ***(1st 3*), Z = *** (2nd 3*)
+ *           --> "g******\0" : if the command starts with a 'g' char, the robotic 
+ *           |                 is to actuate the gripper with Open = * (1st *), and 
+ *           |                 percentage of opening/closing == ***% (2nd, 3rd, 4th *),
+ *           |                 and degree of the gripper = **° (5th, 6th *)
+ *           --> "h------\0" : if the command starts with a 'h' char, the robotic 
+ *                             is to halt and enter "sleep mode" but before that it shall
+ *                             take the default position 0000 (reserved for "closed")
+ *                             (- : don't care)
  */
 
 #include "arm.h"
@@ -44,21 +46,21 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 CMD_SEQUENCE cmd_sequence[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
                 {
-                 .id_  = "0000",
+                 .id_  = "000000",
                  .len  = 4, 
                  .cmd_ = {  // Commands' sequence to target 
-                     "n0000", "n1515", "g0050", "n1232", "g1100", "g0050",
-                     "n0000", "n0000", "g0050", "n1200", "n1515", "g0050",
+                     "n000000", "n150150", "g000050", "n120320", "g110000", "g000500",
+                     "n000000", "n000000", "g005000", "n120000", "n151500", "g005000",
                   }
                 },
 
                 // Second sequence
                 {
-                 .id_  = "0001",
+                 .id_  = "000001",
                  .len  = 5, 
                  .cmd_ = {  // Commands' sequence to target 
-                     "n7777", "n3333", "g1750", "n0000", "g0100", "g0050",
-                     "n0000", "n0000", "g0050", "n1200", "n1515", "g0050",
+                     "n777777", "n150150", "g000050", "n120320", "g110000", "g000500",
+                     "n000000", "n000000", "g005000", "n120000", "n151500", "g005000",
                   }
                 },
 }; // End of cmd_seq initialization
@@ -94,8 +96,6 @@ void arm(void *params){
   char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
-  char str_x[3];                      // Used in the parsing of the (X, Z) from commands
-  char str_z[3];
   int seq_idx;                        // Keeps track of the current sequence
   int prev_seq_idx;
   uint8_t seq_step = 0;               // Keeps track of the current sequence step
@@ -165,11 +165,12 @@ void arm(void *params){
       } // END HALT state
     
       case SINGLE_STATE:{
+        char str_x[COORDINATE_LEN]; // Used in the parsing of the (X, Z) from commands
+        char str_z[COORDINATE_LEN];
         
-        memcpy(str_x, cmd+1, 2*sizeof(char)); // Parse 2nd and 3rd elements of cmd
-        memcpy(str_z, cmd+3, 2*sizeof(char)); // Parse 4th and 5th elements of cmd
-        str_x[2] = '\0';
-        str_z[2] = '\0';
+        memcpy(str_x, cmd+1, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 2nd and 3rd elements of cmd
+        memcpy(str_z, cmd+COORDINATE_LEN, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 4th and 5th elements of cmd
+        str_x[(COORDINATE_LEN - 1)] = str_z[(COORDINATE_LEN - 1)] = '\0';
         target_x = strtol(str_x, NULL, 10);
         target_z = strtol(str_z, NULL, 10);
 
@@ -185,8 +186,8 @@ void arm(void *params){
       case ACTUATE_STATE:{
         
         // Interpolate (update ramp step)
-        float x = interp_x.go(target_x*10, INTERPOLATION_TIME); // target_ * 10 --> turn to millimeter
-        float z = interp_z.go(target_z*10, INTERPOLATION_TIME); 
+        float x = interp_x.go(target_x, INTERPOLATION_TIME); 
+        float z = interp_z.go(target_z, INTERPOLATION_TIME); 
         
         angles = get_angles(x, z);
         actuate_servos(angles);
@@ -329,7 +330,7 @@ void setup_servos(){
 
 // Apply actions to servos
 void actuate_servos(float *ang){
-  shoulder_servo.actuate(*ang);
-  elbow_servo.actuate(*(ang+1));
-  wrist_servo.actuate(*(ang+2));
+  shoulder_servo.actuate(ang[0]);
+  elbow_servo.actuate(ang[1]);
+  wrist_servo.actuate(ang[2]);
 }

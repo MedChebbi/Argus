@@ -14,61 +14,12 @@ static const BaseType_t app_cpu = 1;
 // Globals
 static QueueHandle_t msg_q; 
 
-/*********************************************************************/
-// DEBUG TASKS
-/*********************************************************************/
+// DEBUG Tasks
+void print_messages(void *params);
+void check_log(void *params);
+void ser_cmd_parser(void *params);
 
-// Serial printing task; No Serial call anywhere out of here 
-void print_messages(void *params){
-  char buff[BUFF_LEN];
-  while(1){
-    //             //The queue //item addrs //timeout in ticks
-    if(xQueueReceive(msg_q, (void*)&buff, 0) == pdTRUE){
-      Serial.println(buff);
-    }
-    // Yield to other tasks in order not to trigger the watchdog
-    vTaskDelay(1 / portTICK_PERIOD_MS);
-  }
-}
-
-// This task checks for error logs reported by the robotic arm (& prints them)
-void check_log(void *params){
-  LOG_MSG msg;
-  while(1){
-    msg = get_log();
-    if(msg.have_log){
-      xQueueSend(msg_q, (void*)&msg.log_buf, 0);
-    }
-    // Yield to other tasks
-    vTaskDelay(1 / portTICK_PERIOD_MS);
-  }
-}
-
-// This task parses commands from the serial monitor for testing/debugging purposes
-void ser_cmd_parser(void *params){
-  char s[CMD_LEN];
-  char c;
-  int idx = 0;
-  while(1){
-    if(Serial.available() > 0){
-      c = Serial.read();
-      if(c != '\n'){
-        s[idx++] = c;
-      }
-      else{
-        s[idx] = '\0';
-        idx = 0;
-        assign_cmd(s);
-      }
-    }
-    // Yield to other tasks
-    vTaskDelay(1 / portTICK_PERIOD_MS);
-  }
-}
-
-/*********************************************************************/
-// END __ DEBUG TASKS
-/*********************************************************************/
+/* ---------------------------------------------------------------------------------- */
 
 void setup() {
   
@@ -131,4 +82,54 @@ void setup() {
 
 void loop() {
   // Nothing  
+}
+
+/* ---------------------------------------------------------------------------------- */
+
+// Serial printing task; No Serial call anywhere out of here 
+void print_messages(void *params){
+  char buff[BUFF_LEN];
+  while(1){
+    //             //The queue //item addrs //timeout in ticks
+    if(xQueueReceive(msg_q, (void*)&buff, 0) == pdTRUE){
+      Serial.println(buff);
+    }
+    // Yield to other tasks in order not to trigger the watchdog
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
+}
+
+// This task checks for error logs reported by the robotic arm (& prints them)
+void check_log(void *params){
+  LOG_MSG msg;
+  while(1){
+    msg = get_log();
+    if(msg.have_log){
+      xQueueSend(msg_q, (void*)&msg.log_buf, 0);
+    }
+    // Yield to other tasks
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
+}
+
+// This task parses commands from the serial monitor for testing/debugging purposes
+void ser_cmd_parser(void *params){
+  char s[CMD_LEN];
+  char c;
+  int idx = 0;
+  while(1){
+    if(Serial.available() > 0){
+      c = Serial.read();
+      if(c != '\n'){
+        s[idx++] = c;
+      }
+      else{
+        s[idx] = '\0';
+        idx = 0;
+        assign_cmd(s);
+      }
+    }
+    // Yield to other tasks
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
 }
