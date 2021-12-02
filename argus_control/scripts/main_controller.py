@@ -8,6 +8,7 @@ from argus_msgs.msg import LineInfo
 from argus_control.cfg import pidParamConfig
 from dynamic_reconfigure.server import Server
 
+
 class Controller(object):
     def __init__(self):
         self.pub = rospy.Publisher("control/cmd_vel", Twist, queue_size=1)
@@ -35,7 +36,7 @@ class Controller(object):
     def run_line_follow(self):
         while not rospy.is_shutdown():
             if self.auto_mode == True:
-                print("automatic")
+                print("[INFO] Automatic mode")
                 print(self.line_info.error)
                 if self.line_info.detected == True:
                     self.vel.linear.x = self.pid_param["S"]
@@ -50,7 +51,7 @@ class Controller(object):
 
                     print("no line in auto mode \n robot speed: \n", str(self.vel))
             else:
-                print("manual")
+                print("[INFO] Manual mode")
                 print("robot speed: \n", str(self.vel))
             self.publish()
             rospy.on_shutdown(self.stop)

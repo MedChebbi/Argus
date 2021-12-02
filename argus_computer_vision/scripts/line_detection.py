@@ -83,15 +83,18 @@ class LineDetector:
             self.width = image.shape[1]
             self.height = image.shape[0]
             
+            # Image warping
             widthTop = self.line_param["Width_Top"]
             heightTop = self.line_param["Height_Top"]
             widthBottom = self.line_param["Width_Bottom"]
             heightBottom = self.line_param["Height_Bottom"]
+
             points = np.float32([(widthTop, heightTop), (self.width - widthTop, heightTop),
                                  (widthBottom , heightBottom ), (self.width - widthBottom, heightBottom)])
             img = drawPoints(image.copy(), points)
             imgWarped = self.warpImg (image, points)
             
+            # Running line state detection 
             if self.run_ml_model:
                 gray = cv2.cvtColor(imgWarped,cv2.COLOR_BGR2GRAY)
                 gray = cv2.GaussianBlur(gray,(7,7),1)
@@ -101,24 +104,27 @@ class LineDetector:
             else:
                 self.msg.state = "None"
         
+            # Running color blob detection
             debug_frame, mask, color_info = self.color_detector.detect(image, image.copy(), draw = self.debug)
-            print("color_info :", color_info)
-            #out_image, bwImg, info = self.detBlack(imgWarped, draw = self.debug)
-            
+
+            # Black line detection
             out_image, bwImg, info = self.black_line_detector.detect(imgWarped, imgWarped.copy(), self.line_param, draw = self.debug)
             self.msg.detected = info[0]
             self.msg.error = info[1]
             self.msg.angle = info[2]
             if self.debug:
                 cv2.putText(out_image,"State: "+self.msg.state, (10,80), cv2.FONT_HERSHEY_SIMPLEX, 1, self.RED,2)
-                #rospy.loginfo(self.msg)
+                rospy.loginfo(self.msg)
+                #rospy.loginfo(self.msg.error)
+                #rospy.loginfo(self.msg.angle)
+
             self.img = self.bridge.cv2_to_imgmsg(out_image, "bgr8")
             self.debug_img = self.bridge.cv2_to_imgmsg(debug_frame, "bgr8")
             self.publish()
             rospy.on_shutdown(self.shutdown)
-            cv2.imshow('mask',mask)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                cv2.destroyAllWindows()
+            # cv2.imshow('mask',mask)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     cv2.destroyAllWindows()
             '''
             cv2.imshow('warpedImg',thr)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -193,7 +199,6 @@ def set_default_params():
     rospy.set_param('color_blob/MAX_AREA', 80000)
     rospy.set_param('color_blob/fine_tuning', False)
     rospy.set_param('color_blob/detection_mode', "blob")
-
 
 
 if __name__ == '__main__':

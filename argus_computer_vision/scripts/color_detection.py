@@ -23,9 +23,11 @@ class ColorDetector:
         self.min_area_thre = self.params["MIN_AREA"]
         self.fine_tuning = self.params['fine_tuning']
         self.detection_mode = self.params['detection_mode']
-
+      
         self.error = 0
         self.ang = 0
+
+        #if self.fine_tuning: self._initialize_trackbars()
 
 
     def _initialize_trackbars(self):
@@ -79,12 +81,11 @@ class ColorDetector:
             self.min_area_thre = params["MIN_AREA"]
             thres = params["THRES"]
             self.max_values = np.array([thres,thres,thres])
-            self.roi_mask = int(self.HEIGHT/2.5)
+            self.roi_mask = int(self.HEIGHT/2)
             roi[0:self.roi_mask,:] = (255,255,255)      #(B, G, R)
 
         blurred_frame = cv2.GaussianBlur(roi,(5,5),1)
         if self.color_space == 'HSV':
-            print('HSV')
             processed_frame = cv2.cvtColor(blurred_frame, cv2.COLOR_BGR2HSV)
         elif self.color_space == 'BGR':
             processed_frame = blurred_frame
@@ -121,7 +122,7 @@ class ColorDetector:
             
             else:
                 new_areas = []
-                print("[INFO] Color mode")
+                #print("[INFO] Color mode")
                 
                 if contours_len == 1:
                     x,y,w,h = cv2.boundingRect(contours[0])
@@ -136,8 +137,8 @@ class ColorDetector:
                             y_max = y
                             j_max = j
                         
-                    print("y_max: ",y_max)
-                    print(areas.index(j_max))
+                    # print("y_max: ",y_max)
+                    # print(areas.index(j_max))
                     lowest_contour = contours[j_max]
                     biggest_contour = contours[new_areas.index(new_max_area)]
                     x,y,w,h = cv2.boundingRect(lowest_contour)

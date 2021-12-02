@@ -33,6 +33,7 @@ class MovementDetector(object):
 
     def odom_callback(self, msg):
         NewPosition = msg.pose.pose.position
+        
         if NewPosition.x >= self._current_position.x:
             self.moved_dist.distance_x += self.calculate_distance_x(NewPosition, self._current_position)
         else:
@@ -58,6 +59,7 @@ class MovementDetector(object):
         else:
             self.distance_moved_pub.publish(self.moved_dist)
 
+    
     def update_current_position(self, new_position):
         self._current_position.x = new_position.x
         self._current_position.y = new_position.y
