@@ -5,10 +5,15 @@
     
     // Default sequences creation
     #define MAX_SEQUENCE_LEN        12    // Max steps count in each sequence
-    #define SEQ_ID_LEN              5     // Length of the sequence ID
+    #define SEQ_ID_LEN              7     // Length of the sequence ID
     #define NUM_SEQEUNCES           2     // Number of default sequences
-    #define SEQ_CMD_LEN             6 
+    #define SEQ_CMD_LEN             8 
 
+    #ifdef __cplusplus
+      extern "C"
+      {
+    #endif
+    
     /*
     // Default sequences container 
     struct pair{
@@ -30,5 +35,9 @@
       uint8_t len;
       char cmd_[MAX_SEQUENCE_LEN][SEQ_CMD_LEN];
     };
+
+    #ifdef __cplusplus
+      }
+    #endif
     
 #endif

@@ -22,6 +22,7 @@
     #define STATE_BITMASK           0x07      // 3 last bits for the state of the machine
 
     #define COORDINATE_LEN          (1+3) // Each point is 3 digits long + '\0'
+    #define DEFAULT_COMMAND         "d000000\0"
     
     // States of the machine
     enum{SEQUENCE_STATE, SINGLE_STATE, HALT_STATE, PARSE_STATE, ACTUATE_STATE, GRIPPER_STATE};
