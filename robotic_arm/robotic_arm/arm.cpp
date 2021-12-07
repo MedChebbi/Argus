@@ -9,11 +9,9 @@
  *           --> "g******\0" : if the command starts with a 'g' char, the robotic 
  *           |                 is to actuate the gripper with Open = * (1st *), and 
  *           |                 percentage of opening/closing == ***% (2nd, 3rd, 4th *)
- *           ### IN PROGRESS ###
  *           --> "w******\0" : if the command starts with a 'w' char, then robotic arm 
  *           |                 is to se the parallel_wrist flag = * (1st *), and turn 
  *           |                 the wrist angle to angle = *** (2nd, 3rd, 4th *) (if commanded)
- *           ### END _ IN PROGRESS ###
  *           --> "h------\0" : if the command starts with a 'h' char, the robotic 
  *                             is to halt and enter "sleep mode" but before that it shall
  *                             take the default position 0000 (reserved for "closed")
@@ -83,6 +81,9 @@ CMD_SEQUENCE cmd_sequence[NUM_SEQEUNCES] = {
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
 static QueueHandle_t log_q;           // Log error messages inside this queue
 float *angles;                        // Arm angles to be calculated
+float wrist_angle;                    // Keeps track of the wrist angle when static
+
+char cmd[CMD_LEN];                    // The command holder
 
 // Interpolation objects
 Interpolation interp_x;
@@ -107,7 +108,6 @@ void arm(void *params){
   setup_servos();
   
   // Locals
-  char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
   int seq_idx;                        // Keeps track of the current sequence
@@ -241,7 +241,7 @@ void arm(void *params){
 /*********************************************************************/
 
 // Decode commands to figure the state
-uint8_t decode_action(uint8_t flag, char c){
+static uint8_t decode_action(uint8_t flag, char c){
   switch(c){
     case 'd': // One of the default sequences shall be executed
       return (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
@@ -256,7 +256,8 @@ uint8_t decode_action(uint8_t flag, char c){
       return (flag & ~STATE_BITMASK) | HALT_STATE;
 
     case 'w': // Wrist angle command, used to turn the wrist to a specific angle
-      //#error "Implement the wrist angle actuation"
+      assign_wrist_angle(cmd);
+      return flag;
     
     default:{
       report(UNKNOWN_LOG); 
@@ -287,7 +288,7 @@ LOG_MSG get_log(){
 }
 
 // To be used by the arm task to log errors
-bool report(uint8_t err){
+static bool report(uint8_t err){
   char err_buf[LOG_BUFF_LEN];
   switch(err){
     case INVALID_LOG: 
@@ -310,12 +311,26 @@ bool report(uint8_t err){
   return xQueueSend(log_q, (void*)&err_buf, 0) == pdTRUE; // We successfully logged the error
 }
 
+// Assign the static angle to the wrist 
+static void assign_wrist_angle(const char * w_cmd){
+  
+  if(w_cmd[0] == '0') reset_parallel();
+  else{
+    char angl[4];
+    memcpy(angl, cmd+1, 4);
+    angl[4] = '\0';
+    float raw_angl = strtol(angl, NULL, 10);
+    wrist_angle = abs(raw_angl) > 360 ? 360 : abs(raw_angl);
+    set_parallel();
+  }
+}
+
 /*********************************************************************/
 // Servo functions
 /*********************************************************************/
 
 // Actuate gripper
-void grip(char open_, float perc){
+static void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
       gripper_servo.actuate(MAX_GRIP_ANG + (perc * MID_GRIP_ANG)); 
@@ -344,7 +359,7 @@ void setup_servos(){
 }
 
 // Apply actions to servos
-void actuate_servos(float *ang){
+static void actuate_servos(float *ang){
   shoulder_servo.actuate(ang[0]);
   elbow_servo.actuate(ang[1]);
   wrist_servo.actuate(ang[2]);

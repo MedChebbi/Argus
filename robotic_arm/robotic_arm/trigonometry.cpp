@@ -1,5 +1,9 @@
 #include "trigonometry.h"
 
+extern float wrist_angle;
+
+static uint8_t parallel = 0;
+
 // Calculates angles for the 3 joints in radians 
 float* get_angles(float x, float z){
   static float angles[NUM_ANGLES];
@@ -15,18 +19,27 @@ float* get_angles(float x, float z){
   // Shoulder, elbow, wrist (Radians --> degrees)
   angles[0] = (beta + gamma) * (180/PI);
   angles[1] = (PI - 2 * beta) * (180/PI);
-  // angles[2] = ??? // Dunno either fix it or make it mobile
-  angles[2] = (PI + beta - gamma) * (180/PI); // Always parallel to ground --> bad for gripping from ground
+
+  if(parallel) angles[2] = (PI + beta - gamma) * (180/PI); // Always parallel to ground --> bad for gripping from ground
+  else angles[2] = wrist_angle;
 
   return angles;
 } 
 
 // a/b with appropriate handling of division by 0 issue
-float safe_div(int a, int b){
+static float safe_div(int a, int b){
   // b == 0 <==> a/b --> "infinity"
   return b != 0 ? a/b : 1e8;
 }
 
-int8_t sign(float x){
+static int8_t sign(float x){
   return x / abs(x);
+}
+
+void set_parallel(){
+  parallel = 1;
+}
+
+void reset_parallel(){
+  parallel = 0;
 }
