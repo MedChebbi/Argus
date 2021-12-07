@@ -26,7 +26,7 @@ X5, Y5 = [0.9,1.02],[-0.68,-0.62]
 
 
 line_follow_outcomes = ['reached_p1', 'reached_p2', 'reached_p3', 'reached_p4',
-                        'reached_p5', 'running', 'invalid', 'preempted', 'searching']
+                        'reached_p5', 'preempted']
 
 
 class LineFollow(MonitorState):
@@ -139,7 +139,7 @@ class LineFollow(MonitorState):
             #print("after pid robot speed: \n", str(self.vel))
             print('[INFO] State: running Line Follow')
             self.publish()
-            return 'running'
+            
         
         elif self.line_info.detected == False:
             
@@ -150,16 +150,16 @@ class LineFollow(MonitorState):
                 self.vel.angular.z = 0.6
             self.publish()
             print("[INFO] State: Searching Line")
-            return 'searching'
+            
         
-        else:
-            self.shutdown()
-            return 'invalid'
+        # else:
+        #     self.shutdown()
+        #     return 'invalid'
 
     
 
 
-m1_outcomes = ['fail','succeed','invalid']
+m1_outcomes = ['fail','succeed']
 
 class Mission1(State):
     def __init__(self):
@@ -176,7 +176,7 @@ class Mission1(State):
         
         
 
-m2_outcomes = ['fail','succeed','invalid']
+m2_outcomes = ['fail','succeed']
 
 class Mission2(State):
     def __init__(self):
@@ -193,7 +193,7 @@ class Mission2(State):
             return 'fail'
         
 
-m3_outcomes = ['fail','succeed','running','invalid']
+m3_outcomes = ['fail','succeed','running']
 
 class Mission3(State):
     def __init__(self):
