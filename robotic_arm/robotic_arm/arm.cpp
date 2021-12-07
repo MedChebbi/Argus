@@ -8,8 +8,10 @@
  *           |                 arm is to go to the point X = ***(1st 3*), Z = *** (2nd 3*)
  *           --> "g******\0" : if the command starts with a 'g' char, the robotic 
  *           |                 is to actuate the gripper with Open = * (1st *), and 
- *           |                 percentage of opening/closing == ***% (2nd, 3rd, 4th *),
- *           |                 and degree of the gripper = **° (5th, 6th *)
+ *           |                 percentage of opening/closing == ***% (2nd, 3rd, 4th *)
+ *           --> "w******\0" : if the command starts with a 'w' char, then robotic arm 
+ *           |                 is to se the parallel_wrist flag = * (1st *), and turn 
+ *           |                 the wrist angle to angle = *** (2nd, 3rd, 4th *) (if commanded)
  *           --> "h------\0" : if the command starts with a 'h' char, the robotic 
  *                             is to halt and enter "sleep mode" but before that it shall
  *                             take the default position 0000 (reserved for "closed")
@@ -43,32 +45,45 @@ SEQUENCE default_seq[NUM_SEQEUNCES] = {
 }; // End of default_seq initialization
 */
 
+#ifdef __cplusplus
+  extern "C"
+  {
+#endif
+
 CMD_SEQUENCE cmd_sequence[NUM_SEQEUNCES] = {
                 // First sequence (dedicated to sleep position)
                 {
-                 .id_  = "000000",
-                 .len  = 4, 
-                 .cmd_ = {  // Commands' sequence to target 
+                /* Accessing by designator is allowed in C but not in C++ hence the removing of .id_ ... */
+                /*.id_  = */ "000000",
+                /*.len  = */ 4, 
+                /*.cmd_ = */ {  // Commands' sequence to target 
                      "n000000", "n150150", "g000050", "n120320", "g110000", "g000500",
                      "n000000", "n000000", "g005000", "n120000", "n151500", "g005000",
-                  }
+                 }
                 },
 
                 // Second sequence
                 {
-                 .id_  = "000001",
-                 .len  = 5, 
-                 .cmd_ = {  // Commands' sequence to target 
-                     "n777777", "n150150", "g000050", "n120320", "g110000", "g000500",
+                /*.id_  = */ "000001",
+                /*.len  = */ 6, 
+                /*.cmd_ = */ {  // Commands' sequence to target 
+                     "n000021", "n150150", "g000050", "n120320", "g110000", "g000500",
                      "n000000", "n000000", "g005000", "n120000", "n151500", "g005000",
-                  }
+                 }
                 },
 }; // End of cmd_seq initialization
+
+#ifdef __cplusplus
+  }
+#endif
 
 // Globals
 static QueueHandle_t cmds_q;          // Commands' queue to be used by the robotic arm
 static QueueHandle_t log_q;           // Log error messages inside this queue
 float *angles;                        // Arm angles to be calculated
+float wrist_angle;                    // Keeps track of the wrist angle when static
+
+char cmd[CMD_LEN];                    // The command holder
 
 // Interpolation objects
 Interpolation interp_x;
@@ -93,7 +108,6 @@ void arm(void *params){
   setup_servos();
   
   // Locals
-  char cmd[CMD_LEN];                  // The command holder
   int target_x;                       // The target point in the (X, Z) plane (centimeter)
   int target_z;
   int seq_idx;                        // Keeps track of the current sequence
@@ -156,7 +170,7 @@ void arm(void *params){
 
         if(flag & SLEEP_BITMASK) flag = (flag & ~STATE_BITMASK) | PARSE_STATE;
         else{ // Not in sleep position
-          memcpy(cmd, "d0000\0", CMD_LEN); // Apply sleep sequence
+          memcpy(cmd, DEFAULT_COMMAND, CMD_LEN); // Apply sleep sequence
           //   // Clear last 2 bits   // Set the right state 
           flag = (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
           flag &= ~IN_SEQUENCE_BITMASK;
@@ -168,8 +182,8 @@ void arm(void *params){
         char str_x[COORDINATE_LEN]; // Used in the parsing of the (X, Z) from commands
         char str_z[COORDINATE_LEN];
         
-        memcpy(str_x, cmd+1, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 2nd and 3rd elements of cmd
-        memcpy(str_z, cmd+COORDINATE_LEN, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 4th and 5th elements of cmd
+        memcpy(str_x, cmd+1, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 2nd to 4th elements of cmd
+        memcpy(str_z, cmd+COORDINATE_LEN, (COORDINATE_LEN - 1) * sizeof(cmd[0])); // Parse 5th and 7th elements of cmd
         str_x[(COORDINATE_LEN - 1)] = str_z[(COORDINATE_LEN - 1)] = '\0';
         target_x = strtol(str_x, NULL, 10);
         target_z = strtol(str_z, NULL, 10);
@@ -227,7 +241,7 @@ void arm(void *params){
 /*********************************************************************/
 
 // Decode commands to figure the state
-uint8_t decode_action(uint8_t flag, char c){
+static uint8_t decode_action(uint8_t flag, char c){
   switch(c){
     case 'd': // One of the default sequences shall be executed
       return (flag & ~STATE_BITMASK) | SEQUENCE_STATE;
@@ -241,6 +255,10 @@ uint8_t decode_action(uint8_t flag, char c){
     case 'h': // Halt command, used to put the robotic arm into "sleep"
       return (flag & ~STATE_BITMASK) | HALT_STATE;
 
+    case 'w': // Wrist angle command, used to turn the wrist to a specific angle
+      assign_wrist_angle(cmd);
+      return flag;
+    
     default:{
       report(UNKNOWN_LOG); 
       return flag;
@@ -270,7 +288,7 @@ LOG_MSG get_log(){
 }
 
 // To be used by the arm task to log errors
-bool report(uint8_t err){
+static bool report(uint8_t err){
   char err_buf[LOG_BUFF_LEN];
   switch(err){
     case INVALID_LOG: 
@@ -293,25 +311,37 @@ bool report(uint8_t err){
   return xQueueSend(log_q, (void*)&err_buf, 0) == pdTRUE; // We successfully logged the error
 }
 
+// Assign the static angle to the wrist 
+static void assign_wrist_angle(const char * w_cmd){
+  
+  if(w_cmd[0] == '0') reset_parallel();
+  else{
+    char angl[4];
+    memcpy(angl, cmd+1, 4);
+    angl[4] = '\0';
+    float raw_angl = strtol(angl, NULL, 10);
+    wrist_angle = abs(raw_angl) > 360 ? 360 : abs(raw_angl);
+    set_parallel();
+  }
+}
+
 /*********************************************************************/
 // Servo functions
 /*********************************************************************/
 
 // Actuate gripper
-void grip(char open_, float perc){
+static void grip(char open_, float perc){
   switch(open_){
     case '0':{ // Close gripper
       gripper_servo.actuate(MAX_GRIP_ANG + (perc * MID_GRIP_ANG)); 
       report(GRIPPING_DONE); 
       break;
     }
-    
     case '1':{ // Open gripper
       gripper_servo.actuate(MAX_GRIP_ANG - (perc * MID_GRIP_ANG));
       report(GRIPPING_DONE);
       break;
     }
-    
     default:{  // Invalid input
       report(INVALID_LOG);
       break;
@@ -322,14 +352,14 @@ void grip(char open_, float perc){
 // Setup all servos
 void setup_servos(){        
   // (Pin, Min_us, Max_us)
-  shoulder_servo.attach_servo(SERVO_SHOULDER, 500, 2500);
+  shoulder_servo.attach_servo(SERVO_SHOULDER);
   elbow_servo.attach_servo(SERVO_ELBOW);
   wrist_servo.attach_servo(SERVO_WRIST);
   gripper_servo.attach_servo(SERVO_GRIPPER);
 }
 
 // Apply actions to servos
-void actuate_servos(float *ang){
+static void actuate_servos(float *ang){
   shoulder_servo.actuate(ang[0]);
   elbow_servo.actuate(ang[1]);
   wrist_servo.actuate(ang[2]);

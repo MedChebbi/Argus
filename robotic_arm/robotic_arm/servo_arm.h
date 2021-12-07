@@ -26,19 +26,20 @@
   #define RESOLUTION_8            8     // PWM signal resolution (min:1, max:16)
   #define RESOLUTION_16           16
   
-  #define _60_DEG_SERVO           60    // Types of servos (max range in degrees)
+  #define _60_DEG_SERVO           60  // Types of servos (max range in degrees)
   #define _90_DEG_SERVO           90
   #define _120_DEG_SERVO          120
   #define _180_DEG_SERVO          180
-  
-  #define U_SEC_PER_DEG_60        33    // How many micro seconds per deg for a 60deg range servo
-  #define U_SEC_PER_DEG_90        22    // us/deg (90° servo)
-  #define U_SEC_PER_DEG_120       16    // us/deg (120° servo)
-  #define U_SEC_PER_DEG_180       11    // us/deg (180° servo)
-  
+
   #define DEFAULT_MIN_US          1000  // Default min/max range in us
   #define DEFAULT_MAX_US          2000
-    
+
+  // us/deg (60° servo)
+  #define U_SEC_PER_DEG_60        (((DEFAULT_MAX_US)-(DEFAULT_MIN_US))/(_60_DEG_SERVO))
+  #define U_SEC_PER_DEG_90        (((DEFAULT_MAX_US)-(DEFAULT_MIN_US))/(_90_DEG_SERVO))
+  #define U_SEC_PER_DEG_120       (((DEFAULT_MAX_US)-(DEFAULT_MIN_US))/(_120_DEG_SERVO))
+  #define U_SEC_PER_DEG_180       (((DEFAULT_MAX_US)-(DEFAULT_MIN_US))/(_180_DEG_SERVO))
+  
   // 
   #define MID_GRIP_ANG            40    // The angle at which the gripper is closed
   #define MAX_GRIP_ANG            20    // The max angle the gripper could open/close
@@ -51,11 +52,9 @@
       int max_us;
       uint8_t channel;
       uint8_t pin;
+      float deg_2_useconds;
       uint8_t range;
-      uint8_t us_2_deg;
-
-      void set_defaults(uint8_t channel_, uint8_t range_);
-      
+       
     public:
       
       // Func prototypes

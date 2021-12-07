@@ -6,11 +6,7 @@
     #define LOG_BUFF_LEN            24    // How long each error msg will be (max length)
     
     // LOGGING CODES
-    #define INVALID_LOG             0
-    #define UNKNOWN_LOG             1
-    #define GRIPPING_DONE           2
-    #define SEQUENCE_DONE           3
-    #define POINT_REACHED           4
+    enum{INVALID_LOG, UNKNOWN_LOG, GRIPPING_DONE, SEQUENCE_DONE, POINT_REACHED};
 
     struct LOG_MSG{
       bool have_log = false;

@@ -8,7 +8,9 @@
 
   // Functions' prototypes
   float* get_angles(float x, float z); // Returns a pointer to an array of angles
-  float safe_div(int a, int b);
-  int8_t sign(float x);
-  
+  void set_parallel();
+  void reset_parallel();
+  static float safe_div(int a, int b);
+  static int8_t sign(float x);
+
 #endif

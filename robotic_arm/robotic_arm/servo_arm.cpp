@@ -2,29 +2,24 @@
 
 // Constructor
 ARMServo :: ARMServo(uint8_t channel_, uint8_t range_){
-  set_defaults(channel_, range_);
-}
-
-// Assign private values
-void ARMServo :: set_defaults(uint8_t channel_, uint8_t range_){
   channel = channel_;
-  range   = range_;
+  range = range_;
   
-  switch(range){
+  switch(range_){
     case _60_DEG_SERVO:
-      us_2_deg = U_SEC_PER_DEG_60;
+      deg_2_useconds = U_SEC_PER_DEG_60;
       break;
     case _90_DEG_SERVO:
-      us_2_deg = U_SEC_PER_DEG_90;
+      deg_2_useconds = U_SEC_PER_DEG_90;
       break;
     case _120_DEG_SERVO:
-      us_2_deg = U_SEC_PER_DEG_120;
+      deg_2_useconds = U_SEC_PER_DEG_120;
       break;
     case _180_DEG_SERVO:
-      us_2_deg = U_SEC_PER_DEG_180;
+      deg_2_useconds = U_SEC_PER_DEG_180;
       break;
     default:
-      us_2_deg = U_SEC_PER_DEG_180; 
+      deg_2_useconds = U_SEC_PER_DEG_180; 
     break;
   }
 }
@@ -38,6 +33,10 @@ void ARMServo :: attach_servo(uint8_t pin_, int min_, int max_){
   pin     = pin_;
   min_us  = min_;  
   max_us  = max_;
+
+  if(min_us != DEFAULT_MIN_US || max_us != DEFAULT_MAX_US){
+    deg_2_useconds = ((float)max_us - (float)min_us)/(float)range;
+  }
   
   ledcSetup(channel, PWM_FREQUENCY, RESOLUTION_8);
   ledcAttachPin(pin, channel);
@@ -45,5 +44,5 @@ void ARMServo :: attach_servo(uint8_t pin_, int min_, int max_){
 
 // Actuate the servo to certain angle
 void ARMServo :: actuate(int ang){
-  ledcWrite(channel, ang * us_2_deg);
+  ledcWrite(channel, ang * deg_2_useconds + min_us);
 }
