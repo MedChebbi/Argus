@@ -59,6 +59,9 @@
   #define PWM_RESOLUTION                      255U
   #define DEFUALT_MAX_RPM                     230.0f
   #define DEFUALT_MIN_RPM                     -230.0f
+
+  #define ULTRASONIC_TRIG_PIN                 A3
+  #define ULTRASONIC_ECHO_PIN                 A4
     
   // PID controller's parameters
   #define PID_SAMPLING_TIME                   95 // Sampling time in ms

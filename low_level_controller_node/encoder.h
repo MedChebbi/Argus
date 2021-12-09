@@ -8,7 +8,8 @@
   #define __ENCODER_H__
 
   #include "Arduino.h"
-  #include "ARGUS_configs.h"
+
+  #define GET_ISR_ENC(ENC_PTR, ENC_ISR)   ([]{(ENC_PTR->ENC_ISR)();})
 
   /* ---------------------------------------------- */
   /* ----------------- CLASS BODY ----------------- */

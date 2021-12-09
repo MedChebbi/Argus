@@ -1,13 +1,21 @@
+/*
+ * This is the software for the low level controller of the ARGUS open source 
+ * robot project. 
+ * --------------------------------------------------------------------------
+ * It was made to run on an "Arduino Mega 2560" board.
+ */
+
 #include "imu.h"
 #include "robot.h"
 #include "ros_stuff.h"
 #include "ARGUS_configs.h"
 #include "rpm_controller.h"
+#include "ultrasonic_dist.h"
 #include "kinematics_controller.h"
 
 #ifdef AB_ENCODER // AB encoder to be used
 
-  #include "encoder_AB.h"
+  #include "encoder_AB.h" 
   // Encoder objects for each wheel
   encoder_ab *right_wheel_encoder;
   encoder_ab *left_wheel_encoder;
@@ -52,20 +60,20 @@ void setup(){
     // Hardware node objects
     right_wheel_encoder = new encoder_ab();
     right_wheel_encoder->begin(RIGHT_ENCODER_A_PIN, RIGHT_ENCODER_B_PIN, 
-                               []{right_wheel_encoder->handle_interrupt_A();}, []{right_wheel_encoder->handle_interrupt_B();}, 
-                               FALLING);
+                               GET_ISR_ENC(right_wheel_encoder, handle_interrupt_A),
+                               GET_ISR_ENC(right_wheel_encoder, handle_interrupt_B));
   
     left_wheel_encoder = new encoder_ab();
     left_wheel_encoder->begin(LEFT_ENCODER_A_PIN, LEFT_ENCODER_B_PIN, 
-                              []{right_wheel_encoder->handle_interrupt_A();}, []{right_wheel_encoder->handle_interrupt_B();}, 
-                              FALLING);
+                              GET_ISR_ENC(left_wheel_encoder, handle_interrupt_A),
+                              GET_ISR_ENC(left_wheel_encoder, handle_interrupt_B));
   #else // Use of normal (non AB) encoders
     // Hardware node objects
     right_wheel_encoder = new encoder();
-    right_wheel_encoder->begin(RIGHT_ENCODER_PIN, []{right_wheel_encoder->handle_interrupt();}, FALLING);
+    right_wheel_encoder->begin(RIGHT_ENCODER_PIN, GET_ISR_ENC(right_wheel_encoder, handle_interrupt), FALLING);
   
     left_wheel_encoder = new encoder();
-    left_wheel_encoder->begin(LEFT_ENCODER_PIN, []{left_wheel_encoder->handle_interrupt();}, FALLING);
+    left_wheel_encoder->begin(LEFT_ENCODER_PIN, GET_ISR_ENC(left_wheel_encoder, handle_interrupt), FALLING);
   #endif
   
   right_wheel_controller = new RPM_controller(RIGHT_MOTOR_ENABLE, RIGHT_MOTOR_PIN_1, RIGHT_MOTOR_PIN_2);
@@ -147,6 +155,9 @@ void loop(){
         i2c_read_acc_mpu6050(&my_imu);
         i2c_read_gyr_mpu6050(&my_imu);
         publish_imu(my_imu.acc_xyz, my_imu.gyr_xyz);
+
+        // Publish the distance to the obstacle
+        publish_distance(calculate_distance_cm());
         
         last_pose_publish = time_now;
       }
