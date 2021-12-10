@@ -12,6 +12,7 @@
   #include <geometry_msgs/Twist.h>
   #include <geometry_msgs/Pose2D.h>
   #include <sensor_msgs/Imu.h>
+  #include <std_msgs/Byte.h>
 
   /* ------------------------------------------------------------------------ */
   /* ------------------------- FUNCTIONS DEFINITION ------------------------- */
@@ -20,8 +21,11 @@
   void ros_setup();
   void ros_spin();
 
+  // Publishing functions
   void publish_pose(float x, float y,float theta);
   void publish_imu(float *acc, float *gyr);
+  void publish_distance(byte dist);
+  
   // Callback function for the communication with the high level controller
   void velocity_callback(const geometry_msgs::Twist &vel);
 
@@ -40,11 +44,15 @@
 
   sensor_msgs::Imu imu_data;
   ros::Publisher imu_publisher("sensor_msgs/Imu", &imu_data);
+
+  std_msgs::Byte distance_data;
+  ros::Publisher dist_publisher("std_msgs/Float32", &distance_data);
   
   /* ------------------------------------------------------------------------ */
   /* ------------------------ FUNCTIONS DECLARATIONS ------------------------ */
   /* ------------------------------------------------------------------------ */
 
+  /* --------------------------- SETUP FUNCTIONS ---------------------------- */
   // Setup all nodes 
   void ros_setup(){
     // ROS connection
@@ -52,12 +60,15 @@
     nh.initNode();
     nh.subscribe(cmd_vel_subcriber); // Subscribe to the commanding topic
     nh.advertise(pose2d_publisher); // Advertise the Pose topic to publish pose data to  
-    nh.advertise(imu_publisher); // Advertise the IMU topic to publish IMU data to
+    nh.advertise(imu_publisher); 
+    nh.advertise(dist_publisher); 
   }
 
   // Function to keep the nodes alive
   void ros_spin(){ nh.spinOnce(); }
 
+  /* -------------------------- SENDING FUNCTIONS --------------------------- */
+  
   // Function to publish pose data to geometry_msgs/Pose2D topic
   void publish_pose(float x, float y,float theta){
     pose_2d.x = x, pose_2d.y = y, pose_2d.theta = theta;
@@ -76,6 +87,14 @@
     imu_publisher.publish(&imu_data);
   }
 
+  // Function to publish distance data
+  void publish_distance(byte dist){
+    distance_data.data = dist;
+    dist_publisher.publish(&distance_data);
+  }
+
+  /* ------------------------- RECEIVING FUNCTIONS -------------------------- */
+  
   // Callback from the /cmd_vel topic
   void velocity_callback(const geometry_msgs::Twist &vel){
        target_vel_x = vel.linear.x;
