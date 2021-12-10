@@ -39,7 +39,7 @@ class main():
         # Set the shutdown function (stop the robot)
         rospy.on_shutdown(self.shutdown)
         
-        outcomes = ['invalid','preempted','sm_finished','sm_running']
+        outcomes = ['preempted','sm_finished','sm_running']
        
 
         self.get_init_position()
@@ -55,27 +55,27 @@ class main():
         with self.sm:
             StateMachine.add('LINEFOLLOW', LineFollow("/detected_line/info", LineInfo),
                             transitions={'reached_p1':'MISSION1', 'reached_p2':'MISSION2', 'reached_p3':'sm_running',
-                                        'reached_p4':'sm_running', 'reached_p5':'sm_running', 'running':'sm_running',
-                                        'invalid':'invalid','preempted':'preempted','searching':'sm_running'},
+                                        'reached_p4':'sm_running', 'reached_p5':'sm_running',
+                                        'preempted':'preempted'},
                             )
         
             StateMachine.add('MISSION1', Mission1(),
-                            transitions={'succeed':'sm_finished','fail':'sm_finished','invalid':'invalid'})
+                            transitions={'succeed':'sm_finished','fail':'sm_finished'})
 
             StateMachine.add('MISSION2', Mission2(),
-                            transitions={'succeed':'LINEFOLLOW','fail':'sm_finished','invalid':'invalid'})
+                            transitions={'succeed':'LINEFOLLOW','fail':'sm_finished'})
 
         
         #sis = IntrospectionServer('smach_server', self.sm, '/SM_ROOT')
         #sis.start()
-       
-        if self.auto_mode == True:
-            outcome = self.sm.execute()
-            print(outcome)
-        else:
-            print("[INFO] Manual mode")
-            print("robot speed: \n", str(self.vel))
-        self.publish()
+        while not rospy.is_shutdown():
+            if self.auto_mode == True:
+                outcome = self.sm.execute()
+                print(outcome)
+            else:
+                print("[INFO] Manual mode")
+                print("robot speed: \n", str(self.vel))
+            self.publish()
         
         #sis.stop()
         
