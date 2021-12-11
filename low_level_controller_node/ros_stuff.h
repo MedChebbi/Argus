@@ -38,15 +38,21 @@
 
   // Subscribe to the commanding topic
   ros::Subscriber<geometry_msgs::Twist> cmd_vel_subcriber("control/cmd_vel", velocity_callback);
-  
-  geometry_msgs::Pose2D pose_2d;
-  ros::Publisher pose2d_publisher("geometry_msgs/Pose2D", &pose_2d);
 
-  sensor_msgs::Imu imu_data;
-  ros::Publisher imu_publisher("sensor_msgs/Imu", &imu_data);
+  #ifdef ADVERTISE_POSE_DATA
+    geometry_msgs::Pose2D pose_2d;
+    ros::Publisher pose2d_publisher("geometry_msgs/Pose2D", &pose_2d);
+  #endif
 
-  std_msgs::Byte distance_data;
-  ros::Publisher dist_publisher("std_msgs/Float32", &distance_data);
+  #ifdef ADVERTISE_IMU_DATA
+    sensor_msgs::Imu imu_data;
+    ros::Publisher imu_publisher("sensor_msgs/Imu", &imu_data);
+  #endif
+
+  #ifdef ADVERTISE_RANGE_DATA
+    std_msgs::Byte distance_data;
+    ros::Publisher dist_publisher("std_msgs/Float32", &distance_data);
+  #endif
   
   /* ------------------------------------------------------------------------ */
   /* ------------------------ FUNCTIONS DECLARATIONS ------------------------ */
@@ -58,41 +64,57 @@
     // ROS connection
     nh.getHardware()->setBaud(ROS_SERIAL_COMM_BAUDRATE); // Establish a serial connection
     nh.initNode();
+
     nh.subscribe(cmd_vel_subcriber); // Subscribe to the commanding topic
-    nh.advertise(pose2d_publisher); // Advertise the Pose topic to publish pose data to  
-    nh.advertise(imu_publisher); 
-    nh.advertise(dist_publisher); 
+
+    #ifdef ADVERTISE_POSE_DATA
+      nh.advertise(pose2d_publisher); // Advertise the Pose topic to publish pose data to  
+    #endif
+
+    #ifdef ADVERTISE_IMU_DATA
+      nh.advertise(imu_publisher); 
+    #endif
+
+    #ifdef ADVERTISE_RANGE_DATA
+      nh.advertise(dist_publisher); 
+    #endif
   }
 
   // Function to keep the nodes alive
   void ros_spin(){ nh.spinOnce(); }
 
   /* -------------------------- SENDING FUNCTIONS --------------------------- */
+
+  #ifdef ADVERTISE_POSE_DATA
+    // Function to publish pose data to geometry_msgs/Pose2D topic
+    void publish_pose(float x, float y,float theta){
+      pose_2d.x = x, pose_2d.y = y, pose_2d.theta = theta;
+      pose2d_publisher.publish(&pose_2d);
+    }
+  #endif
+
+  #ifdef ADVERTISE_IMU_DATA
+    // Function to publish IMU data to sensor_msgs/Imu topic
+    void publish_imu(float *acc, float *gyr){
+      imu_data.linear_acceleration.x = acc[0];
+      imu_data.linear_acceleration.y = acc[1];
+      imu_data.linear_acceleration.z = acc[2];
+      imu_data.angular_velocity.x = gyr[0];
+      imu_data.angular_velocity.y = gyr[1];
+      imu_data.angular_velocity.z = gyr[2];
   
-  // Function to publish pose data to geometry_msgs/Pose2D topic
-  void publish_pose(float x, float y,float theta){
-    pose_2d.x = x, pose_2d.y = y, pose_2d.theta = theta;
-    pose2d_publisher.publish(&pose_2d);
-  }
+      imu_publisher.publish(&imu_data);
+    }
+  #endif
 
-  // Function to publish IMU data to sensor_msgs/Imu topic
-  void publish_imu(float *acc, float *gyr){
-    imu_data.linear_acceleration.x = acc[0];
-    imu_data.linear_acceleration.y = acc[1];
-    imu_data.linear_acceleration.z = acc[2];
-    imu_data.angular_velocity.x = gyr[0];
-    imu_data.angular_velocity.y = gyr[1];
-    imu_data.angular_velocity.z = gyr[2];
-
-    imu_publisher.publish(&imu_data);
-  }
-
-  // Function to publish distance data
-  void publish_distance(byte dist){
-    distance_data.data = dist;
-    dist_publisher.publish(&distance_data);
-  }
-
+  #ifdef ADVERTISE_RANGE_DATA
+    // Function to publish distance data
+    void publish_distance(byte dist){
+      distance_data.data = dist;
+      dist_publisher.publish(&distance_data);
+    }
+  #endif
+  
   /* ------------------------- RECEIVING FUNCTIONS -------------------------- */
   
   // Callback from the /cmd_vel topic

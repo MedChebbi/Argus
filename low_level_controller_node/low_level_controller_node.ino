@@ -146,18 +146,25 @@ void loop(){
 
       // Send the Pose2D data on a fixed rate
       if((time_now - last_pose_publish) >= ODOM_PUBLISH_PERIOD){
-        // Get Pose2D data and publish it
-        float x, y, theta;
-        ARGUS->get_pose(x, y, theta);
-        publish_pose(x, y, theta);
+        
+        #ifdef ADVERTISE_POSE_DATA
+          // Get Pose2D data and publish it
+          float x, y, theta;
+          ARGUS->get_pose(x, y, theta);
+          publish_pose(x, y, theta);
+        #endif
 
-        // Read IMU data and publish it
-        i2c_read_acc_mpu6050(&my_imu);
-        i2c_read_gyr_mpu6050(&my_imu);
-        publish_imu(my_imu.acc_xyz, my_imu.gyr_xyz);
+        #ifdef ADVERTISE_IMU_DATA
+          // Read IMU data and publish it
+          i2c_read_acc_mpu6050(&my_imu);
+          i2c_read_gyr_mpu6050(&my_imu);
+          publish_imu(my_imu.acc_xyz, my_imu.gyr_xyz);
+        #endif
 
-        // Publish the distance to the obstacle
-        publish_distance(calculate_distance_cm());
+        #ifdef ADVERTISE_RANGE_DATA
+          // Publish the distance to the obstacle
+          publish_distance(calculate_distance_cm());
+        #endif
         
         last_pose_publish = time_now;
       }

@@ -60,6 +60,7 @@
   #define DEFUALT_MAX_RPM                     230.0f
   #define DEFUALT_MIN_RPM                     -230.0f
 
+  // Ultrasonic sensor pins
   #define ULTRASONIC_TRIG_PIN                 A3
   #define ULTRASONIC_ECHO_PIN                 A4
     
@@ -86,5 +87,10 @@
   // ARGUS state update time
   #define ARGUS_UPDTAE_PERIOD                 10000U // 10ms --> 100Hz
   #define ODOM_PUBLISH_PERIOD                 20000U // 20ms --> 50Hz
+  
+  // Advertised data config --> Comment any one that you don't want to advertise
+  #define ADVERTISE_POSE_DATA 
+  #define ADVERTISE_IMU_DATA
+  #define ADVERTISE_RANGE_DATA
 
 #endif // __ARGUS_CONFIGS_H__
