@@ -55,8 +55,8 @@ class Streamer:
 				elif self.param["size"] == 3:
 					dim = (1280,720)
 
-				if cv2.waitKey(10) & 0xFF == ord('q'):
-					break
+				#if cv2.waitKey(10) & 0xFF == ord('q'):
+				#	break
 				resized_frame = cv2.resize(frame,dim)
 				self.width = resized_frame.shape[1]
 				self.height = resized_frame.shape[0]
@@ -64,7 +64,7 @@ class Streamer:
 				print(self.height)
 				frame2 = self.display_esti_dist(resized_frame)
 				frame2 = self.drawFPS(frame2)
-				cv2.imshow('output2',frame2)
+				#cv2.imshow('output2',frame2)
 				#cv2.imshow('output',frame)
 				self.msg = self.bridge.cv2_to_imgmsg(resized_frame,'bgr8')
 				self.publish()

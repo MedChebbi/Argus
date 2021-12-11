@@ -16,8 +16,9 @@ int main(int argc, char** argv)
       ROS_ERROR_STREAM("Failed to open camera with index " << CAMERA_INDEX << "!");
       ros::shutdown();
     }
-    capture.set(cv::CAP_PROP_FRAME_WIDTH,480);
-    capture.set(cv::CAP_PROP_FRAME_HEIGHT,360);
+    capture.set(cv::CAP_PROP_FRAME_WIDTH,640);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT,480);
+    capture.set(cv::CAP_PROP_BRIGHTNESS,-8);
     // Image_transport is responsible for publishing and subscribing to Images
     image_transport::ImageTransport it(nh);
      
@@ -41,8 +42,8 @@ int main(int argc, char** argv)
         ros::shutdown();
       }
       // Convert image from cv::Mat (OpenCV) type to sensor_msgs/Image (ROS) type and publish
-      flip(frame,image,-1);
-      msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+      //flip(frame,image,-1);
+      msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
       pub_frame.publish(msg);
       //cv::imshow("camera", frame);
       //cv::waitKey(1); // Display image for 1 millisecond
