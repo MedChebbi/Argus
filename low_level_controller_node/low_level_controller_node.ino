@@ -89,6 +89,9 @@ void setup(){
   // Setup the IMU instance
   i2c_init_mpu6050(&my_imu, &i2c_two_wire);
   i2c_setup_mpu6050(&my_imu, MPU6050_FULL);
+
+  // Setup the ultrasonic sensor pins
+  ultrasonic_setup();
 }
 
 void loop(){
@@ -96,11 +99,12 @@ void loop(){
   unsigned long time_now = micros();
 
   // Keep the node alive
-  ros_spin();
+  ros_spin(); 
+
+  /* REMOVED THE STATE MACHINE */
+  //switch(SM_state){
     
-  switch(SM_state){
-    case UPDATE_STATE:{
-      
+    //case UPDATE_STATE:{ // This state is visited only when an update is made to the cmd_vel callback is triggered
       #ifndef AB_ENCODER // Use of non-AB encoder that needs to be told the direction
         #error "The direction choice isn't implemented yet! --> Add it first"
         uint8_t robot_direction = DIR_FORWARD; // DIR_BACKWARD
@@ -108,7 +112,7 @@ void loop(){
         right_wheel_encoder->set_direction(robot_direction);
         left_wheel_encoder->set_direction(robot_direction);
       #endif
-       
+
       // Get the desired RPM for each wheel from the received target velocities
       wheels_rpm = get_rpm_from_vel(target_vel_x, target_vel_z);
 
@@ -116,12 +120,13 @@ void loop(){
       left_wheel_controller->set_target_rpm(wheels_rpm.left_wheel_rpm);
       right_wheel_controller->set_target_rpm(wheels_rpm.right_wheel_rpm);
 
-      REQUEST_EXECUTE_STATE(SM_state); // Go to execute state
-      break;
-    }
+      //REQUEST_EXECUTE_STATE(SM_state); // Go to execute state
+      //break;
+    //}
 
-    case EXECUTE_STATE:{
-
+    //case EXECUTE_STATE:{
+     
+      
       // Update the state of ARGUS each 100th of a second
       if((time_now - last_ARGUS_update) >= ARGUS_UPDTAE_PERIOD){
         // Get the tick counts for each wheel
@@ -168,10 +173,9 @@ void loop(){
         
         last_pose_publish = time_now;
       }
-      
-      break;
-    }
+      //break;
+    //}
 
-    default: break;
-  } // END __ SM
+    //default: break;
+  //} // END __ SM
 } // END __ loop()

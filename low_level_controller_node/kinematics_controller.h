@@ -8,16 +8,10 @@
     float right_wheel_rpm;
   }RPM_RL;
 
-  RPM_RL get_rpm_from_vel(float linear_x, float angular_z);
-
-  /* ---------------------------------------------- */
-  /* ----------- FUNCTIONS' DECLARATION ----------- */
-  /* ---------------------------------------------- */
-  
   RPM_RL get_rpm_from_vel(float linear_x, float angular_z){
     return {
-        /* left wheel rpm */  (linear_x - angular_z * 0.5f * BASELINE_DISTANCE)/(RPM_TO_RAD_PER_S * DIST_PER_RADIAN),
-        /* right wheel rpm */ (linear_x + angular_z * 0.5f * BASELINE_DISTANCE)/(RPM_TO_RAD_PER_S * DIST_PER_RADIAN),
+        /* left wheel rpm */  (linear_x * 60.0 + angular_z * 30.0f * BASELINE_DISTANCE) / DIST_PER_RADIAN,
+        /* right wheel rpm */ (linear_x * 60.0 - angular_z * 30.0f * BASELINE_DISTANCE) / DIST_PER_RADIAN
     };
   }
   

@@ -61,7 +61,8 @@
   RPM_controller :: RPM_controller(uint8_t enable_pin, uint8_t motor_pin_1, uint8_t motor_pin_2){
     _enable_pin = enable_pin;
     _motor_pin_1 = motor_pin_1;
-    _motor_pin_2 = motor_pin_1;
+    _motor_pin_2 = motor_pin_2;
+
     pinMode(enable_pin, OUTPUT);
     pinMode(motor_pin_1, OUTPUT);
     pinMode(motor_pin_2, OUTPUT);
@@ -124,11 +125,12 @@
     // Get the pwm to the appropriate range (0 -> 255)
     if(pwm < 0){
       _direction = DIR_BACKWARD;
-      pwm_drive = map(constrain(pwm,-255, 0), 0, -255, 0, 255);
+      pwm_drive = constrain(pwm,-255, 0);
+      pwm_drive = map(pwm_drive, 0, -255, 0, 255);
     }
     else{
       _direction = DIR_FORWARD;
-      pwm_drive = constrain(pwm,-255, 0);
+      pwm_drive = constrain(pwm, 0, 255);
     }
 
     // Set motor's speed

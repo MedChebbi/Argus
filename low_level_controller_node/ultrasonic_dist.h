@@ -4,6 +4,11 @@
   #define SPEED_OF_SOUND_IN_AIR       0.034f // Speed of sound in Air in cm/s
   #define MAX_DISTANCE                200 // In centimeter 
 
+  void ultrasonic_setup(){
+    pinMode(ULTRASONIC_ECHO_PIN, INPUT);
+    pinMode(ULTRASONIC_TRIG_PIN, OUTPUT);
+  }
+
   uint16_t calculate_distance_cm(){
     
     digitalWrite(ULTRASONIC_TRIG_PIN, LOW);

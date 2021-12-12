@@ -12,7 +12,7 @@
   #include <geometry_msgs/Twist.h>
   #include <geometry_msgs/Pose2D.h>
   #include <sensor_msgs/Imu.h>
-  #include <std_msgs/Byte.h>
+  #include <std_msgs/UInt8.h>
 
   /* ------------------------------------------------------------------------ */
   /* ------------------------- FUNCTIONS DEFINITION ------------------------- */
@@ -24,7 +24,7 @@
   // Publishing functions
   void publish_pose(float x, float y,float theta);
   void publish_imu(float *acc, float *gyr);
-  void publish_distance(byte dist);
+  void publish_distance(uint8_t dist);
   
   // Callback function for the communication with the high level controller
   void velocity_callback(const geometry_msgs::Twist &vel);
@@ -41,17 +41,17 @@
 
   #ifdef ADVERTISE_POSE_DATA
     geometry_msgs::Pose2D pose_2d;
-    ros::Publisher pose2d_publisher("geometry_msgs/Pose2D", &pose_2d);
+    ros::Publisher pose2d_publisher("Argus/Pose", &pose_2d);
   #endif
 
   #ifdef ADVERTISE_IMU_DATA
     sensor_msgs::Imu imu_data;
-    ros::Publisher imu_publisher("sensor_msgs/Imu", &imu_data);
+    ros::Publisher imu_publisher("Argus/Imu", &imu_data);
   #endif
 
   #ifdef ADVERTISE_RANGE_DATA
-    std_msgs::Byte distance_data;
-    ros::Publisher dist_publisher("std_msgs/Float32", &distance_data);
+    std_msgs::UInt8 distance_data;
+    ros::Publisher dist_publisher("Argus/dist", &distance_data);
   #endif
   
   /* ------------------------------------------------------------------------ */
@@ -109,7 +109,7 @@
 
   #ifdef ADVERTISE_RANGE_DATA
     // Function to publish distance data
-    void publish_distance(byte dist){
+    void publish_distance(uint8_t dist){
       distance_data.data = dist;
       dist_publisher.publish(&distance_data);
     }
@@ -119,9 +119,9 @@
   
   // Callback from the /cmd_vel topic
   void velocity_callback(const geometry_msgs::Twist &vel){
-       target_vel_x = vel.linear.x;
-       target_vel_z = vel.angular.z;
-       REQUEST_UPDATE_STATE(SM_state);
+     target_vel_x = vel.linear.x;
+     target_vel_z = vel.angular.z;
+     //REQUEST_UPDATE_STATE(SM_state);
   }
   
 #endif // __ROS_STUFF_H__
