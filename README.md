@@ -4,7 +4,7 @@
 
 ## Description
 
-Argus is a dream of an extensible robotics platform built on ROS with the main focus being the ease of future integrability of any desired functionality such as:
+Argus is a dream of an **extensible** robotics platform built on ROS with the main focus being the ease of future integrability of any desired functionality such as:
 
 - Computer Vision: Object detection and tracking, 3D perception, Visual odometry, ...
 
@@ -18,18 +18,17 @@ Argus is a dream of an extensible robotics platform built on ROS with the main f
 
 - ROS: Robot Operating System
 
-- Python/C++
+- Python, C/C++
 
-- Raspberry Pi/Arduino
+- Raspberry Pi, Arduino, ESP32, Jetson Nano
 
-- Robotic Arm 
+- Robotic Arm, Gripper, Kinematics
 
 ---
 
 ## Disclamer
 
 This project is still in the making and some functionalities migh not be intergrated yet at the time of you reading this.
-
 
 ---
 
@@ -40,7 +39,6 @@ TODO
 ---
 
 ## References
-
 
 TODO
 
