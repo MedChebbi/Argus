@@ -1,6 +1,3 @@
-#include <ros.h>
-#include <geometry_msgs/Twist.h>
-#include <ros/time.h>
 #include "Kinematics.h"
 
 #define MOTOR_MAX_RPM 250        // motor's maximum rpm
@@ -16,7 +13,7 @@
 #define r_w2         9
 #define r_speed_pin  11
 
-ros::NodeHandle nh;
+
 Kinematics kinematics(MOTOR_MAX_RPM, WHEEL_DIAMETER, FR_WHEEL_DISTANCE, LR_WHEEL_DISTANCE, PWM_BITS);
 
 double x = 0;
@@ -25,8 +22,8 @@ double theta = 0;
 float motor_speed = 0;
 
 // cmd_vel variables to be received to drive with
-float demandx;
-float demandz;
+float demandx = 0;
+float demandz = 0;
 
 int pwmL = 0;
 int pwmR = 0;
@@ -36,20 +33,11 @@ unsigned long currentMillis;
 long previousMillis = 0;    // set up timers
 float loopTime = 10;
 
-void velCallback(  const geometry_msgs::Twist& vel)
-{
-     demandx = vel.linear.x;
-     demandz = vel.angular.z;
-}
 
-ros::Subscriber<geometry_msgs::Twist> sub("control/cmd_vel" , velCallback);
 
 void setup() {
-  nh.getHardware()->setBaud(115200);      // set baud rate to 115200
-  nh.initNode();              // init ROS
-  nh.subscribe(sub);          // subscribe to cmd_vel
 
-  //Serial.begin(9600);
+  Serial.begin(9600);
   //setup the pins for motor control
   pinMode(r_w1,OUTPUT);
   pinMode(r_w2,OUTPUT);
@@ -61,7 +49,8 @@ void setup() {
 }
 
 void loop() {
-  nh.spinOnce();
+  demandx = 0.3;
+  demandz = -0.2;
   moving(demandx,demandz);
   delay(5);
 }
@@ -94,6 +83,7 @@ void forward(float x){
   x = x*100;
   x = constrain(x,0,100);
   motor_speed = map(x,0,100,0,255);
+
   analogWrite(r_speed_pin,int(motor_speed));
   analogWrite(l_speed_pin,int(motor_speed));
 }
@@ -105,6 +95,7 @@ void backward(float x){
   x = x*100;
   x = constrain(x,-100,0);
   motor_speed = map(x,0,-100,0,255);
+
   analogWrite(r_speed_pin,int(motor_speed));
   analogWrite(l_speed_pin,int(motor_speed));
 }
@@ -116,6 +107,7 @@ void rot_right(float z){
   z = z*100;
   z = constrain(z,-100,0);
   motor_speed = map(z,0,-100,0,255);
+
   analogWrite(r_speed_pin,int(motor_speed));
   analogWrite(l_speed_pin,int(motor_speed));
 }
@@ -127,6 +119,7 @@ void rot_left(float z){
   z = z*100;
   z = constrain(z,0,100);
   motor_speed = map(z,0,100,0,255);
+
   analogWrite(r_speed_pin,int(motor_speed));
   analogWrite(l_speed_pin,int(motor_speed));
 }*/
